@@ -6,10 +6,11 @@ This document explains how MCP Monitor intercepts MCP traffic, why it was built 
 
 * **Problem.** When Claude uses a tool it sends a request to an MCP server, and nothing asks the user first.
 * **Idea.** Put a small program in the path of every request. It **holds** each tool call, asks a background app (the daemon), which shows a popup. **Allow** forwards the original request; **Block** answers Claude itself and the real server never sees it.
-* **Three doors, one decision engine.**
+* **Four doors, one decision engine.**
   * *Shim*: local servers in Claude Desktop and Claude Code (the config makes Claude start the shim instead of the server).
   * *Gateway*: servers that Claude Web reaches over HTTPS (the tunnel address is the gateway's).
   * *Browser extension + bridge*: connectors added directly in claude.ai, best effort (it holds claude.ai's own "Allow once" click).
+  * *Claude Code hook*: claude.ai connectors used inside Claude Code (Claude Code asks our hook before every tool call).
 * **Safe by default.** If the monitor is unsure (daemon down, no answer, error) the request is blocked.
 * **More detail.** [Setup](setup.md), [configuration](configuration.md), [security](security.md), [edge cases](edge-cases.md), [testing](testing.md).
 
@@ -51,13 +52,17 @@ A connector added in claude.ai is called by Anthropic's cloud, so neither the sh
 
 This is deliberately labelled best effort: it only works when claude.ai shows its prompt, it reads the parameters as displayed (not the raw request), it depends on the prompt's layout, and it covers the browser only. It fails closed (any error means Decline). Details: [extension/README.md](../extension/README.md).
 
+### A fourth door for Claude Code: a `PreToolUse` hook
+
+Claude Code can run a command before every tool call, MCP tools and claude.ai connectors included (tool names look like `mcp__<server>__<tool>`). `hook.py` is registered as that command. It reads the call from stdin, asks the daemon through the same gatekeeper (so the popup, queue and audit log are shared), and answers Claude Code: **exit 0 with `permissionDecision: "allow"`** to allow, **exit 2 with a reason** to block. Exit 2 is Claude Code's documented way to block a call, and every failure path in the hook uses it. A hook that fails with any other exit code would let the call through, so the installer also sets `"onFailure": "block"`. Unlike the shim and gateway, the hook does not sit in the data path: it is a gate Claude Code itself consults, which is why it can cover connectors that Anthropic's servers run.
+
 ### Alternatives that were rejected
 
 | Idea | Why not |
 |---|---|
 | Sniff network traffic | MCP over HTTPS is encrypted, and sniffing can watch but never block. |
 | Inject code into the Claude app (Electron debugging, DLL hooks) | Breaks on every update and may violate the app's terms. |
-| Browser extension on claude.ai | The tool call runs on Anthropic's servers, so an extension could see it but not stop it. |
+| A passive browser extension that only watches claude.ai | It could see the call but not stop it. (The extension we ship holds claude.ai's own approval click, which does let it block.) |
 | Watch for new processes | Shows that a server started, not what it was asked to do. |
 
 ## 3. What happens to one request
@@ -97,6 +102,7 @@ Details that matter:
 | Module | Responsibility |
 |---|---|
 | `protocol.py` | Pure functions: classify messages, build denials, mask secrets, make text safe to display. |
+| `hook.py` | Claude Code `PreToolUse` hook: gates MCP tools (including claude.ai connectors) in Claude Code. |
 | `gatekeeper.py` | The single "ask the daemon, apply the failure rule" routine used by both proxies. |
 | `shim.py` | Stdio proxy: holds/forwards/denies, tracks in-flight requests, handles server crashes, cleans up the child. |
 | `gateway/` | HTTP proxy for Claude Web: session handling, upstream (stdio or HTTP), security checks. |
@@ -147,12 +153,12 @@ The full security model (controls, trust boundaries, limits) is in [security.md]
 
 ## 9. Known limitations
 
-* Claude.ai connectors (Figma, Gmail...) used inside Claude Desktop or Claude Code still work normally but are not monitored: they go through Anthropic's servers, not through our shim or gateway. Interception there was not attempted.
+* Claude.ai connectors in the Claude Desktop chat tab are not monitored (no shim, gateway or hook is in their path; interception there was not attempted).
 * Connectors added in claude.ai are covered only by the best-effort browser extension.
 * The gateway refuses JSON-RPC batches and does not support server-initiated streams.
 
-The complete list, with reasons, is in [edge-cases.md](edge-cases.md#8-known-gaps-and-limits-honest-list).
+The complete list, with reasons, is in [edge-cases.md](edge-cases.md#9-known-gaps-and-limits-honest-list).
 
 ## 10. Testing
 
-73 automated tests plus manual checks on the real Claude apps. See [testing.md](testing.md).
+96 automated tests plus manual checks on the real Claude apps. See [testing.md](testing.md).

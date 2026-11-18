@@ -3,7 +3,7 @@
 ## Run the tests
 
 ```bash
-.venv\Scripts\python -m pytest -q          # 73 tests, about 35 seconds
+.venv\Scripts\python -m pytest -q          # 96 tests, about 40 seconds
 .venv\Scripts\python -m pytest -k block -v # only the tests about blocking, listed by name
 ```
 
@@ -20,6 +20,7 @@ Captured results of the latest run: [test-results.md](test-results.md).
 | `tests/test_gateway.py` | 20 | The real HTTP gateway: sessions, tokens, origins, concurrency, hang-ups, cancel, crash, daemon down, HTTP upstream including streamed replies. |
 | `tests/test_bridge.py` | 9 | The browser bridge: token, origins (Chrome and Edge), size limits, masking, fail closed. |
 | `tests/test_installer.py` | 12 | Config wrapping and unwrapping, backups, dry run, undo, corrupt files, Store-install path. |
+| `tests/test_hook.py` | 23 | The Claude Code hook: allow and block answers, popup details, every failure path blocks, the real hook process, and the settings-file installer. |
 | `tests/test_audit.py` | 2 | What is written to the audit log, and the privacy switch. |
 | `tests/test_broker.py` | 1 | The cap on simultaneous requests. |
 
@@ -35,7 +36,12 @@ These cannot run in an automated test because they need the real Claude apps and
 | Claude Desktop, agent-mode session: allow, block, timeout | Works. The chat tab starts the same shim; a tool call from the chat tab itself was not observed. |
 | Claude Web through the gateway and a Cloudflare tunnel: allow and block | Works |
 | Figma connector in claude.ai through the browser extension (Edge): allow and block | Works |
-| Figma connector (claude.ai connector) used inside Claude Code, with the monitor running | The call works and returns data; the monitor sees nothing (no popup, no audit entry). Not checked in the Desktop chat tab. |
+| Figma connector in a terminal Claude Code session **without** the hook | Works; the monitor sees nothing (this is why the hook was added) |
+| Same call **with the hook**, daemon set to block everything | Call stopped; Claude was told "Blocked by MCP Monitor" |
+| With the hook, daemon set to allow everything | Call ran and returned data |
+| With the hook, no daemon and autostart off | Call stopped (fails closed) |
+| With the hook, real popup: Allow, then Block | Allow ran the call; Block stopped it ("Blocked by the user") |
+| Hook in the Claude Desktop app's Code tab and in IDEs | Not verified (Anthropic's docs say hooks fire there) |
 | Shim starts the daemon by itself, including after Claude Desktop restarted | Works |
 | A real popup left unanswered | Blocked after the timeout |
 | Popup on high-DPI screen (buttons not clipped) | Fixed and checked |

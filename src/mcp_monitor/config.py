@@ -51,6 +51,7 @@ class Settings:
     autostart_daemon: bool = True      # shim starts the daemon if it is not running
     preview_max_chars: int = 4000      # parameter text shown in the popup / audit log
     log_arguments: bool = True         # False: the audit log records decisions but not parameters
+    hook_skip_servers: tuple = ()      # Claude Code hook: MCP servers it should not ask about (e.g. ones a shim covers)
     button_delay_ms: int = 600         # buttons are inert this long after a popup appears
     log_level: str = "INFO"
     disabled: bool = False             # pass-through mode (emergency off switch)
@@ -91,6 +92,7 @@ class Settings:
         if self.decision_timeout <= 0:
             self.decision_timeout = 60.0
         self.intercept_methods = tuple(str(m) for m in (self.intercept_methods or ("tools/call",)))
+        self.hook_skip_servers = tuple(str(s) for s in (self.hook_skip_servers or ()))
         self.max_pending = max(1, int(self.max_pending))
         self.max_visible_popups = max(1, int(self.max_visible_popups))
         return self

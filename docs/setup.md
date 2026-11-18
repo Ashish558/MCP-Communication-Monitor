@@ -8,6 +8,7 @@ Set up only the parts for the kinds of tools you use.
 | 2 | **Local tools** in Claude Desktop / Claude Code: wrap them with the installer | Claude starts these tools itself, so a small program (the shim) can sit in the middle and hold each request. |
 | 3 | **Your own tools for Claude Web**: run the gateway and a tunnel, add the tunnel address as a connector | Claude Web calls tools from Anthropic's cloud, so the tool's address has to be ours for us to see the request. |
 | 4 | **Tools added in the Claude website** (Figma, Gmail, Slack...): run the bridge and load the browser extension | Anthropic's servers call these tools directly, so neither the shim nor the gateway can see them. The only thing that happens on your PC is the website's own "Allow once" prompt. The extension holds that click and asks the daemon first. **Without step 4, these tools run with no popup.** |
+| 5 | **claude.ai connectors used inside Claude Code**: register the Claude Code hook | Claude Code runs a hook before every tool call, including these connectors. Our hook asks the daemon first, so a block really stops the call. **Without step 5, these connectors run with no popup in Claude Code.** |
 
 ## Prerequisites
 
@@ -95,10 +96,36 @@ The extension code is in the [`extension/`](../extension/) folder of this repo.
 
 This step is best effort: it works only when claude.ai shows its own approval prompt. More detail and limits: [extension/README.md](../extension/README.md).
 
+## Step 5: claude.ai connectors used inside Claude Code
+
+**Why this step exists:** connectors such as Figma, Gmail or Slack are called through Anthropic's servers, so the shim and gateway cannot see them. Claude Code, however, runs a **`PreToolUse` hook before every tool call**, including these connectors (their tool names look like `mcp__claude_ai_Figma__whoami`). MCP Monitor registers itself as that hook, so the same popup appears and a block really stops the call. It is not Figma-specific: it gates every MCP tool that matches.
+
+1. Start the daemon (step 1).
+2. Register the hook in a Claude Code settings file. Preview first. **Project** scope affects only that project; **user** scope affects every Claude Code session:
+
+   ```bash
+   cd path\to\your\project
+   .venv\Scripts\python -m mcp_monitor hook-install --target project --dry-run
+   .venv\Scripts\python -m mcp_monitor hook-install --target project
+   .venv\Scripts\python -m mcp_monitor hook-install --target user      # every Claude Code session
+   ```
+
+   Other targets: `local` (`.claude/settings.local.json`) or a file path.
+3. Use Claude Code normally. Each MCP tool call opens the popup with `claude-code (hook)` in the "From" line. **Allow** lets it run, and Claude Code does not ask a second time. **Block** stops it and Claude is told "Blocked by MCP Monitor".
+
+Things to know:
+
+* Only MCP tools are gated; Bash, Edit and other built-in tools are left alone. Narrow it with `--matcher` (a regex on the tool name), for example `mcp__claude_ai_.*` for claude.ai connectors only.
+* **Avoid double popups.** A server already wrapped by the shim (step 2) is also an MCP tool. Skip it with a matcher such as `mcp__(?!myserver__).*`, or list it under `hook_skip_servers` in the [configuration](configuration.md).
+* **Fails closed.** The hook exits with code 2 (Claude Code's "block") on any problem. The installer also sets `"onFailure": "block"` (Claude Code 2.1.295 or newer), so even a hook that cannot start blocks the call.
+* Claude Code's own deny and ask rules still apply on top of the hook.
+* Check with `hook-status --target ...`; undo with `hook-uninstall --target ...` (a backup is made first). Claude Code picks up settings-file changes by itself; restart a running session if it does not.
+
 ## Undo and recovery
 
 * Every config change is preceded by a backup in `backups/config/` (timestamped; the first one, `*.original.json`, is never overwritten). That folder is git-ignored because it can hold local paths.
 * `python -m mcp_monitor uninstall --target <...> --all` puts the original commands back. `restore --target <...>` copies the pristine backup over the config.
+* The Claude Code hook is removed with `python -m mcp_monitor hook-uninstall --target <...>`.
 * **Emergency switch:** set the environment variable `MCP_MONITOR_DISABLE=1` and shims become plain pass-through (no popups).
 * Editing the Desktop config affects every Desktop chat, and `~/.claude.json` every Claude Code session. For testing, prefer a project-level `.mcp.json`.
 * To stop everything: quit the daemon from its tray icon (or end its process), stop the gateway, bridge and tunnel, and remove the extension from the browser.
@@ -115,3 +142,5 @@ This step is best effort: it works only when claude.ai shows its own approval pr
 | Extension options say HTTP 401 or "no token" | Paste the token printed by `bridge`; run `bridge --rotate-token` for a new one. |
 | Extension options say HTTP 403 | Update to the latest extension and bridge (Edge uses an `extension://` origin, which the bridge accepts). |
 | A request is blocked with "No answer within 60 seconds" | Click within the timeout, or raise `decision_timeout` ([configuration](configuration.md)). |
+| The hook shows no popup in Claude Code | Check `hook-status`, that the matcher covers the tool, and `%LOCALAPPDATA%\mcp-monitor\hook.log`. Hooks are read from settings files, so run it in the project where it was installed (or use `--target user`). |
+| Two popups for one tool call in Claude Code | The server is covered by both the shim and the hook. Add it to `hook_skip_servers` or change the matcher. |

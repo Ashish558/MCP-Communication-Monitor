@@ -307,13 +307,13 @@ class Shim:
             self._finish(0)
 
 
-def configure_logging(level: str) -> None:
+def configure_logging(level: str, filename: str = "shim.log") -> None:
     """Log to a file only: stdout is reserved for protocol messages."""
     home = data_dir()
     try:
         home.mkdir(parents=True, exist_ok=True)
         handler: logging.Handler = logging.handlers.RotatingFileHandler(
-            home / "shim.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8")
+            home / filename, maxBytes=2_000_000, backupCount=3, encoding="utf-8")
     except OSError:
         handler = logging.NullHandler()
     handler.setFormatter(logging.Formatter("%(asctime)s %(process)d %(levelname)s %(message)s"))

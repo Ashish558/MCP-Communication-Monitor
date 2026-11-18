@@ -11,9 +11,7 @@ Results of the automated test suite, captured from a real run. For what the test
 | Python | 3.13.1 |
 | Libraries | pytest 9.2.0, aiohttp 3.14.5, pystray 0.19.5, Pillow 13.0.0 |
 | Command | `python -m pytest -v` |
-| Result | **73 passed in 37.03s** (0 failed, 0 skipped) |
-
-The same suite also passed on a fresh clone of the repository, following only the README install steps.
+| Result | **96 passed in 42.24s** (0 failed, 0 skipped) |
 
 ## Results by file
 
@@ -23,16 +21,30 @@ The same suite also passed on a fresh clone of the repository, following only th
 | `tests/test_bridge.py` | 9 | Browser bridge: token, origins (Chrome and Edge), size limits, masking, fail closed |
 | `tests/test_broker.py` | 1 | Cap on simultaneous requests |
 | `tests/test_gateway.py` | 20 | Real HTTP gateway: sessions, tokens, origins, concurrency, hang-ups, cancel, crash, HTTP upstream and streamed replies |
+| `tests/test_hook.py` | 23 | Claude Code hook: allow/block answers, popup details, every failure blocks, the real hook process, settings-file installer |
 | `tests/test_installer.py` | 12 | Config wrap/unwrap, backups, dry run, undo, corrupt files, Store-install path |
 | `tests/test_integration.py` | 17 | Real shim process + fake MCP server + daemon: allow, block, concurrency, timeout, cancel, daemon down/stopped, crash, batches, garbage input |
 | `tests/test_protocol.py` | 12 | Message classification, denial replies, id handling, secret masking, text sanitising, previews |
-| **Total** | **73** | |
+| **Total** | **96** | |
 
-The tests start the real shim and gateway as separate processes against a fake MCP server (`tests/fake_mcp_server.py`), and use a rule-driven stand-in for the popup, so they run without a person. They use a temporary data folder and never touch real Claude config. A passing "block" test means the request really was blocked and never reached the server.
+The tests start the real shim, gateway and hook as separate processes against a fake MCP server (`tests/fake_mcp_server.py`), and use a rule-driven stand-in for the popup, so they run without a person. They use a temporary data folder and never touch real Claude config. A passing "block" test means the request really was blocked and never reached the server.
+
+## Live checks of the Claude Code hook (Figma connector)
+
+A real `claude` process was run in a throwaway project with the hook registered, and asked to call the Figma `whoami` tool (claude.ai connector, tool name `mcp__claude_ai_Figma__whoami`). Claude Code 2.1.302.
+
+| Setup | Outcome |
+|---|---|
+| Without the hook | Figma ran; the monitor saw nothing |
+| Hook + daemon set to block everything | Not run: "Blocked by MCP Monitor" |
+| Hook + daemon set to allow everything | Ran and returned the account handle |
+| Hook + no daemon, autostart off | Not run: "The monitor is not running, so the request was blocked for safety" |
+| Hook + real popup, user clicked Allow | Ran (decision recorded as "Allowed by the user") |
+| Hook + real popup, user clicked Block | Not run: "Blocked by the user" |
 
 ## Real use recorded by the app's own audit log
 
-Besides the automated tests, the app was used with the real Claude apps during development and while recording the demo. These counts come from its audit log (`audit.jsonl`); parameters are not shown.
+Besides the automated tests, the app was used with the real Claude apps during development and while recording the demo. These counts come from its audit log (`audit.jsonl`); parameters are not shown, and decisions made by the headless automatic daemon during the live hook checks above are excluded.
 
 | Interception path | Decisions | Allowed | Blocked by the user | Blocked by timeout |
 |---|---|---|---|---|
@@ -40,7 +52,8 @@ Besides the automated tests, the app was used with the real Claude apps during d
 | Shim: Claude Code | 5 | 3 | 1 | 1 |
 | Gateway: Claude Web | 2 | 2 | 0 | 0 |
 | Browser extension: claude.ai connectors (Figma and test connectors) | 12 | 11 | 1 | 0 |
-| **Total** | **30** | **23** | **5** | **2** |
+| Claude Code hook: claude.ai Figma connector | 3 | 2 | 1 | 0 |
+| **Total** | **33** | **25** | **6** | **2** |
 
 Notes: Desktop entries come from Claude Desktop's agent-mode sessions. The gateway's block path in real use was not recorded in this log; it is covered by the automated tests (for example `test_blocked_call_never_reaches_server`).
 
@@ -79,6 +92,29 @@ PASSED  tests/test_gateway.py::test_fails_closed_when_daemon_is_down
 PASSED  tests/test_gateway.py::test_http_upstream_allow_block_and_header_passthrough
 PASSED  tests/test_gateway.py::test_http_upstream_sse_reply_is_streamed_through
 PASSED  tests/test_gateway.py::test_http_upstream_down_gives_clean_error
+PASSED  tests/test_hook.py::test_non_mcp_tools_are_not_touched
+PASSED  tests/test_hook.py::test_allowed_mcp_call_returns_the_documented_allow_json
+PASSED  tests/test_hook.py::test_blocked_mcp_call_exits_2_with_a_reason_for_claude
+PASSED  tests/test_hook.py::test_popup_shows_server_tool_parameters_and_the_hook_client
+PASSED  tests/test_hook.py::test_server_name_falls_back_to_the_tool_prefix
+PASSED  tests/test_hook.py::test_secrets_in_tool_input_are_masked_in_the_popup
+PASSED  tests/test_hook.py::test_skip_servers_setting_leaves_a_covered_server_alone
+PASSED  tests/test_hook.py::test_disable_switch_makes_the_hook_a_no_op
+PASSED  tests/test_hook.py::test_unanswered_popup_blocks_with_exit_2
+PASSED  tests/test_hook.py::test_daemon_down_blocks_with_exit_2
+PASSED  tests/test_hook.py::test_unreadable_input_blocks[None]
+PASSED  tests/test_hook.py::test_unreadable_input_blocks[text]
+PASSED  tests/test_hook.py::test_unreadable_input_blocks[42]
+PASSED  tests/test_hook.py::test_unreadable_input_blocks[bad3]
+PASSED  tests/test_hook.py::test_unexpected_error_inside_the_hook_blocks
+PASSED  tests/test_hook.py::test_tool_name_parsing
+PASSED  tests/test_hook.py::test_real_hook_process_allow_block_and_garbage
+PASSED  tests/test_hook.py::test_hook_install_adds_ours_and_keeps_everything_else
+PASSED  tests/test_hook.py::test_hook_install_is_idempotent_and_can_change_the_matcher
+PASSED  tests/test_hook.py::test_hook_dry_run_writes_nothing
+PASSED  tests/test_hook.py::test_hook_uninstall_removes_only_ours
+PASSED  tests/test_hook.py::test_hook_install_creates_a_missing_settings_file_and_cleans_up_after
+PASSED  tests/test_hook.py::test_hook_install_refuses_a_corrupt_settings_file
 PASSED  tests/test_installer.py::test_wrap_and_unwrap_are_exact_inverses
 PASSED  tests/test_installer.py::test_install_wraps_only_chosen_servers_and_keeps_everything_else
 PASSED  tests/test_installer.py::test_install_all_skips_remote_servers

@@ -264,3 +264,116 @@ def doctor(path: Path) -> list[str]:
         else:
             lines.append(f"ok    {name}: monitored")
     return lines
+
+
+# --------------------------------------------------------------------------- Claude Code hook
+HOOK_TIMEOUT_SECONDS = 100      # longer than decision_timeout (60 s), so we answer before Claude Code gives up
+DEFAULT_HOOK_MATCHER = "mcp__.*"
+
+
+def settings_target(target: str) -> Path:
+    """``user`` / ``project`` / ``local`` -> the matching Claude Code settings file; else a path."""
+    key = target.lower()
+    if key == "user":
+        return Path.home() / ".claude" / "settings.json"
+    if key == "project":
+        return Path.cwd() / ".claude" / "settings.json"
+    if key == "local":
+        return Path.cwd() / ".claude" / "settings.local.json"
+    return Path(target).expanduser().resolve()
+
+
+def hook_command(python: str | None = None) -> str:
+    # forward slashes and quotes work in both cmd-style and bash-style shells
+    return f'"{Path(python or sys.executable).as_posix()}" -m mcp_monitor hook'
+
+
+def _is_our_hook(handler: object) -> bool:
+    return isinstance(handler, dict) and "mcp_monitor hook" in str(handler.get("command", ""))
+
+
+def _load_settings(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    return load_config(path)
+
+
+def _hook_groups(config: dict) -> list:
+    hooks = config.get("hooks", {})
+    if not isinstance(hooks, dict):
+        raise InstallerError('"hooks" must be an object')
+    groups = hooks.get("PreToolUse", [])
+    if not isinstance(groups, list):
+        raise InstallerError('"hooks.PreToolUse" must be a list')
+    return groups
+
+
+def _strip_ours(config: dict) -> int:
+    """Remove our hook handlers (and any group left empty). Returns how many were removed."""
+    removed = 0
+    groups = _hook_groups(config)
+    kept = []
+    for group in groups:
+        handlers = group.get("hooks", []) if isinstance(group, dict) else []
+        mine = [h for h in handlers if _is_our_hook(h)]
+        removed += len(mine)
+        rest = [h for h in handlers if not _is_our_hook(h)]
+        if isinstance(group, dict) and rest:
+            kept.append({**group, "hooks": rest})
+        elif not mine:
+            kept.append(group)
+    if removed:
+        if kept:
+            config["hooks"]["PreToolUse"] = kept
+        else:
+            config["hooks"].pop("PreToolUse", None)
+            if not config["hooks"]:
+                config.pop("hooks", None)
+    return removed
+
+
+def hook_install(path: Path, matcher: str = DEFAULT_HOOK_MATCHER, dry_run: bool = False,
+                 backup_dir: Path | None = None, python: str | None = None) -> str:
+    """Register the MCP Monitor PreToolUse hook in a Claude Code settings file."""
+    before = _load_settings(path)
+    config = copy.deepcopy(before)
+    replaced = _strip_ours(config)                      # idempotent: never two copies
+    config.setdefault("hooks", {}).setdefault("PreToolUse", []).append({
+        "matcher": matcher,
+        "hooks": [{"type": "command", "command": hook_command(python),
+                   "timeout": HOOK_TIMEOUT_SECONDS, "onFailure": "block"}],
+    })
+    report = [f"{'update' if replaced else 'add   '} PreToolUse hook (matcher {matcher!r}) in {path}"]
+    if dry_run:
+        return "\n".join(report + ["", _diff(path, before, config), "", "(dry run: nothing written)"])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        report.append(f"Backup: {backup(path, backup_dir)}")
+    write_atomic(path, config)
+    return "\n".join(report + ["Claude Code picks hook changes up from the settings file; restart a running session if it does not."])
+
+
+def hook_uninstall(path: Path, dry_run: bool = False, backup_dir: Path | None = None) -> str:
+    if not path.exists():
+        raise InstallerError(f"settings file not found: {path}")
+    before = load_config(path)
+    config = copy.deepcopy(before)
+    removed = _strip_ours(config)
+    if not removed:
+        return f"No MCP Monitor hook found in {path}. Nothing to change."
+    if dry_run:
+        return "\n".join([f"remove {removed} hook(s) from {path}", "", _diff(path, before, config), "", "(dry run: nothing written)"])
+    saved = backup(path, backup_dir)
+    write_atomic(path, config)
+    return f"remove {removed} hook(s) from {path}\nBackup: {saved}"
+
+
+def hook_status(path: Path) -> str:
+    if not path.exists():
+        return f"no settings file at {path}"
+    config = load_config(path)
+    for group in _hook_groups(config):
+        for handler in group.get("hooks", []) if isinstance(group, dict) else []:
+            if _is_our_hook(handler):
+                return f"installed (matcher {group.get('matcher')!r}) in {path}"
+    return f"not installed in {path}"

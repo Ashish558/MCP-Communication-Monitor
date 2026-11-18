@@ -14,6 +14,7 @@ Optional: `%LOCALAPPDATA%\mcp-monitor\config.json` (all keys optional; invalid v
 | `autostart_daemon` | `true` | Lets the shim start the daemon when it is not running. |
 | `preview_max_chars` | `4000` | Length limit for the parameters shown in the popup and written to the log. |
 | `log_arguments` | `true` | Set `false` to keep parameters out of the audit log (decisions are still logged). |
+| `hook_skip_servers` | `[]` | MCP server names the Claude Code hook should leave alone (for example ones a shim already covers). |
 | `button_delay_ms` | `600` | Allow and Block ignore clicks for this long after a popup appears. |
 | `log_level` | `"INFO"` | Level for the component logs. |
 | `disabled` | `false` | Pass-through mode (usually set with the environment variable below). |
@@ -43,6 +44,10 @@ Run as `python -m mcp_monitor <command>` (or `mcp-monitor <command>` after insta
 | `restore --target T [--from FILE]` | Copy a backup over the config (default: the pristine `*.original.json`). |
 | `gateway --name N (--url URL [--header K=V] \| -- CMD...) [--port P] [--public-url U] [--rotate-token]` | HTTP gateway for Claude Web. |
 | `bridge [--port P] [--rotate-token]` | Local endpoint for the browser extension (default port 8766). |
+| `hook` | Internal: the Claude Code `PreToolUse` hook command (reads the call from stdin). |
+| `hook-install --target T [--matcher REGEX] [--dry-run]` | Register the hook in a Claude Code settings file. `T` is `user`, `project`, `local` or a path. Default matcher `mcp__.*` (every MCP tool). |
+| `hook-uninstall --target T [--dry-run]` | Remove the hook (backup first). |
+| `hook-status --target T` | Is the hook registered? |
 | `shim ...` | Internal: the proxy that the installer puts in front of a server. |
 
 ## Files
@@ -52,7 +57,7 @@ Everything the app writes lives in `%LOCALAPPDATA%\mcp-monitor`:
 | File | Content |
 |---|---|
 | `audit.jsonl` | One JSON line per event: `requested`, `decided` (decision, reason, wait time), `session_start`, daemon start/stop. Rotates at 5 MB, keeps 5 files. |
-| `daemon.log`, `shim.log`, `gateway.log`, `bridge.log` | Component logs (rotating). The gateway's access log is switched off so the secret URL token is not written. |
+| `daemon.log`, `shim.log`, `gateway.log`, `bridge.log`, `hook.log` | Component logs (rotating). The gateway's access log is switched off so the secret URL token is not written. |
 | `daemon.json` | Port and token of the running daemon (deleted on a clean exit). |
 | `gateway.json`, `bridge.json` | Secret tokens. Delete a file to invalidate its token. |
 | `config.json` | Your settings (optional). |

@@ -59,6 +59,20 @@ def _build_parser() -> argparse.ArgumentParser:
     b.add_argument("--port", type=int, default=8766)
     b.add_argument("--rotate-token", action="store_true", help="invalidate the old extension token")
 
+    sub.add_parser("hook", help="(internal) Claude Code PreToolUse hook: asks the popup before an MCP tool runs")
+    for name, text in (("hook-install", "register the hook in a Claude Code settings file"),
+                       ("hook-uninstall", "remove the hook from a Claude Code settings file"),
+                       ("hook-status", "is the hook registered?")):
+        h = sub.add_parser(name, help=text)
+        h.add_argument("--target", required=True,
+                       help='"user" (~/.claude/settings.json), "project" or "local" (./.claude/...), or a file path')
+        if name != "hook-status":
+            h.add_argument("--dry-run", action="store_true", help="show the diff, write nothing")
+            h.add_argument("--backup-dir", type=Path)
+        if name == "hook-install":
+            h.add_argument("--matcher", default="mcp__.*",
+                           help='which tools to gate (regex on the tool name; default "mcp__.*" = every MCP tool)')
+
     s = sub.add_parser("shim", help="(internal) proxy in front of one MCP server")
     s.add_argument("--server-name", required=True)
     s.add_argument("--client", default="unknown")
@@ -76,6 +90,25 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         from .shim import run_shim
         return run_shim(args.server_name, args.client, command)
+
+    if args.cmd == "hook":
+        from .hook import run_hook
+        return run_hook()
+
+    if args.cmd in ("hook-install", "hook-uninstall", "hook-status"):
+        from . import installer
+        try:
+            path = installer.settings_target(args.target)
+            if args.cmd == "hook-status":
+                print(installer.hook_status(path))
+            elif args.cmd == "hook-install":
+                print(installer.hook_install(path, args.matcher, args.dry_run, args.backup_dir))
+            else:
+                print(installer.hook_uninstall(path, args.dry_run, args.backup_dir))
+        except installer.InstallerError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        return 0
 
     if args.cmd == "daemon":
         return _daemon(args)

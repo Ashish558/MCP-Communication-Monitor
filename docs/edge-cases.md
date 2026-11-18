@@ -71,7 +71,24 @@ How to read the Evidence column: a test name means an automated test proves it (
 | "Always allow" clicked while the extension is on | Converted to a single "Allow once", so every call stays gated | mock page checks |
 | claude.ai shows the tool name in separate lines | Parsed correctly; never sends an empty parameter box | mock page checks (found during testing) |
 
-## 6. Config files and installer
+## 6. Claude Code hook (claude.ai connectors in Claude Code)
+
+| Case | What happens | Evidence |
+|---|---|---|
+| Ordinary tools (Bash, Edit...) | Not touched: no popup, no output | `test_non_mcp_tools_are_not_touched` |
+| An MCP call you allow | Hook answers with the documented allow JSON; Claude Code does not ask a second time | `test_allowed_mcp_call_returns_the_documented_allow_json`, *manual* (Figma ran) |
+| An MCP call you block | Exit code 2 with a reason; Claude is told and the tool does not run | `test_blocked_mcp_call_exits_2_with_a_reason_for_claude`, *manual* (Figma stopped, with a headless block and with a real popup) |
+| What the popup shows | Server name (from the hook's `mcp_server`, or the tool prefix), tool, masked parameters, client `claude-code (hook)` | `test_popup_shows_server_tool_parameters_and_the_hook_client`, `test_server_name_falls_back_to_the_tool_prefix`, `test_secrets_in_tool_input_are_masked_in_the_popup` |
+| claude.ai connector tool names | Match the `mcp__.*` pattern (`mcp__claude_ai_Figma__whoami`) | *manual* |
+| No answer, daemon down, unreadable input, unexpected error | All exit 2, so the call is blocked | `test_unanswered_popup_blocks_with_exit_2`, `test_daemon_down_blocks_with_exit_2`, `test_unreadable_input_blocks`, `test_unexpected_error_inside_the_hook_blocks`, *manual* (no daemon, Figma stopped) |
+| The real hook process | Allow, block and garbage input behave the same as the function | `test_real_hook_process_allow_block_and_garbage` |
+| Hook fails with a code other than 2 (for example Python missing) | Claude Code would let the call run, so the installer sets `onFailure: "block"` (Claude Code 2.1.295+) | by design; documented |
+| A server already covered by a shim | Skip it (`hook_skip_servers` or a matcher) to avoid two popups | `test_skip_servers_setting_leaves_a_covered_server_alone` |
+| Emergency off switch | `MCP_MONITOR_DISABLE=1` makes the hook do nothing | `test_disable_switch_makes_the_hook_a_no_op` |
+| Registering the hook | Idempotent, keeps the user's own hooks and settings, backs up first, dry run writes nothing | `test_hook_install_adds_ours_and_keeps_everything_else`, `test_hook_install_is_idempotent_and_can_change_the_matcher`, `test_hook_dry_run_writes_nothing` |
+| Removing the hook | Removes only ours and leaves no empty `hooks` behind; a missing file is created on install; a corrupt file is refused untouched | `test_hook_uninstall_removes_only_ours`, `test_hook_install_creates_a_missing_settings_file_and_cleans_up_after`, `test_hook_install_refuses_a_corrupt_settings_file` |
+
+## 7. Config files and installer
 
 | Case | What happens | Evidence |
 |---|---|---|
@@ -85,7 +102,7 @@ How to read the Evidence column: a test name means an automated test proves it (
 | Microsoft Store build of Claude Desktop | Config found in the Store locations | `test_desktop_config_path_finds_the_microsoft_store_package`, *manual* |
 | Claude Desktop must restart | The installer says so after every change | by design |
 
-## 7. Safety of what is shown and stored
+## 8. Safety of what is shown and stored
 
 | Case | What happens | Evidence |
 |---|---|---|
@@ -93,11 +110,13 @@ How to read the Evidence column: a test name means an automated test proves it (
 | A tool tries to spoof the popup (invisible or right-to-left characters, icon glyphs) | Shown as visible escapes | `test_sanitize_escapes_bidi_and_control_characters`, `test_sanitize_escapes_private_use_icon_glyphs` |
 | Parameters should not be stored | `log_arguments: false` keeps them out of the audit log | `test_log_arguments_off_keeps_decisions_but_never_writes_parameters` |
 
-## 8. Known gaps and limits (honest list)
+## 9. Known gaps and limits (honest list)
 
 | Gap | Why it exists / what to do |
 |---|---|
-| Claude.ai connectors (Figma, Gmail...) used inside Claude Desktop or Claude Code are not monitored | They keep working normally, but they are called through Anthropic's servers, so our shim and gateway are not in the path and no popup appears. Checked in Claude Code: a Figma call worked and left no trace in the audit log. The Desktop chat tab was not checked, and interception there was not attempted |
+| Claude.ai connectors (Figma, Gmail...) in the Claude Desktop chat tab are not monitored | No shim, gateway or hook is in their path. They keep working normally. Interception there was not attempted |
+| The Claude Code hook was verified in a terminal Claude Code session (2.1.302) only | Anthropic's docs say hooks also fire in the Desktop app and IDE extensions; I did not verify those |
+| The hook relies on a Claude Code feature | If Claude Code ignored a hook's block for some MCP tool (user reports of this existed for older versions), the call would run. It was verified to block on the tested version |
 | Website connectors depend on claude.ai's own prompt | Best effort. It breaks if a tool is on "Always allow" or the prompt layout changes (it then fails safe) |
 | Server-initiated requests (for example sampling) and notifications are not gated | They are not tool calls from Claude; documented |
 | `resources/read` and `prompts/get` are not intercepted by default | Add them to `intercept_methods` |
