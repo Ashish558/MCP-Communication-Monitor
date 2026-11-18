@@ -1,0 +1,112 @@
+# MCP Communication Monitor
+
+Python app that sits between Claude and its MCP servers and asks you **Allow** or **Block** for every tool call, in a popup that appears on top of your other windows. A blocked call is never executed; Claude receives a clear denial instead.
+
+> **Status:** local stdio interception (Claude Code app + Claude Desktop local servers) is implemented and tested. The Claude Web gateway is the next phase, see [plan.md](plan.md).
+
+## How it works (short)
+
+```
+Claude Desktop / Claude Code --stdio--> [shim] --stdio--> real MCP server
+                                           |
+                                           +--local socket--> [daemon: queue + popup + audit log]
+```
+
+* MCP messages are JSON-RPC lines. Claude starts each local MCP server as a child process and talks to it through stdin/stdout.
+* The installer rewrites a server's entry in Claude's config so Claude starts the **shim** instead. The shim starts the real server itself and relays every message.
+* A `tools/call` request is **held**. The shim asks the **daemon**, which shows the popup. *Allow* forwards the original message untouched; *Block* answers Claude directly with an `isError` tool result ("Blocked by the user...") and the real server never sees the call.
+* Everything else (`initialize`, `tools/list`, notifications) passes through unchanged, so it works across MCP protocol versions.
+* Failure default is **fail closed**: if the daemon is unreachable, crashes, or nobody answers within the timeout, the call is blocked.
+
+Full design, edge cases and security notes: [plan.md](plan.md). Fallback plan: [backups/plan-b-fallback.md](backups/plan-b-fallback.md).
+
+## Install
+
+Requires Python 3.10+ (tested on 3.13, Windows 11).
+
+```bash
+python -m venv .venv
+.venv\Scripts\python -m pip install -e ".[tray]"      # tray icon is optional; drop [tray] to skip it
+```
+
+## Run
+
+1. **Start the daemon** (background app; shims also start it automatically on first use):
+
+   ```bash
+   .venv\Scripts\pythonw -m mcp_monitor daemon
+   ```
+
+2. **Route an MCP server through the monitor.** Preview first, nothing is written with `--dry-run`:
+
+   ```bash
+   # Claude Code: a project-scoped .mcp.json only affects that project
+   .venv\Scripts\python -m mcp_monitor install --target path\to\project\.mcp.json --server myserver --dry-run
+   .venv\Scripts\python -m mcp_monitor install --target path\to\project\.mcp.json --server myserver
+
+   # Claude Desktop (%APPDATA%\Claude\claude_desktop_config.json) - affects every Desktop chat
+   .venv\Scripts\python -m mcp_monitor install --target desktop --server filesystem
+   ```
+
+   Restart the Claude app so it reloads its servers. Nothing is wrapped unless you name it (`--server NAME`, repeatable, or `--all`).
+
+3. Use Claude as normal. Each tool call shows a popup with the client, MCP server, tool name and parameters (secrets masked).
+
+Other commands: `list`, `doctor`, `status`, `uninstall`, `restore` (all take `--target`).
+
+## Undo / safety net
+
+* Every config change is preceded by a backup in `backups/config/` (timestamped; the first backup, `*.original.json`, is never overwritten).
+* `python -m mcp_monitor uninstall --target <...> --all` puts the original commands back; `restore` copies the pristine backup over the config.
+* Emergency off switch: set the environment variable `MCP_MONITOR_DISABLE=1` and shims become pure pass-through.
+* Editing the global Claude Desktop config affects every chat, and `~/.claude.json` every Claude Code session; for testing prefer a project-level `.mcp.json`.
+
+## Configuration
+
+`%LOCALAPPDATA%\mcp-monitor\config.json` (all optional):
+
+| Key | Default | Meaning |
+|---|---|---|
+| `fail_mode` | `closed` | `closed` blocks when the monitor is unavailable; `open` allows |
+| `decision_timeout` | `60` | seconds before an unanswered popup auto-blocks |
+| `intercept_methods` | `["tools/call"]` | add `resources/read`, `prompts/get` to cover them too |
+| `max_pending` | `100` | more simultaneous requests than this are auto-blocked |
+| `max_visible_popups` | `3` | extra requests wait in a queue |
+| `autostart_daemon` | `true` | shim starts the daemon when needed |
+
+Logs in the same folder: `audit.jsonl` (every request and decision), `daemon.log`, `shim.log`.
+
+## Popup behaviour
+
+* Always on top, taskbar flashes; one window per request, up to 3 visible, the rest queue.
+* Buttons are inert for ~0.6 s after appearing and Enter does nothing, so a stray keypress cannot approve a call. Esc or closing the window = Block.
+* Parameters are shown as plain text with invisible/bidi control characters escaped, so a tool cannot spoof the dialog.
+
+## Tests and demo
+
+```bash
+.venv\Scripts\python -m pytest -q                    # 38+ tests: protocol, installer, end-to-end with a fake MCP server
+.venv\Scripts\python scripts\popup_demo.py           # shows 3 real concurrent popups
+```
+
+## Layout
+
+```
+src/mcp_monitor/
+  protocol.py   JSON-RPC helpers, redaction, display sanitising
+  shim.py       stdio proxy (hold / forward / deny, crash handling)
+  ipc.py        shim <-> daemon channel (127.0.0.1 + token)
+  daemon/       broker (queue, timeouts, cancel), Tk popups, tray, audit log
+  installer.py  backup-first config wrapping / unwrapping
+  cli.py        python -m mcp_monitor <command>
+tests/          unit + end-to-end tests, fake MCP server
+```
+
+## Known limits
+
+* Claude Web calls MCP servers from Anthropic's cloud, so it can only be covered through the gateway (next phase); connectors added directly in claude.ai bypass the monitor.
+* Notifications have no reply and cannot be blocked; JSON-RPC batches are decided per item.
+* Popups open on the primary monitor.
+* A user with admin rights can bypass the monitor by editing the config back; `doctor` reports unmonitored servers.
+
+> `requirements.txt` in this repo is the original assignment text, not a pip requirements file. Dependencies are declared in `pyproject.toml`.

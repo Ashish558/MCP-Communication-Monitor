@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+# Config backups made by the installer can hold local paths/env values: keep them local.
+backups/config/
