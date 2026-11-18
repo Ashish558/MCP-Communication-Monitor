@@ -148,7 +148,7 @@ Logs in the same folder: `audit.jsonl` (every request and decision), `daemon.log
 
 ## Tests
 
-`python -m pytest -q` runs 68 tests, including end-to-end tests that start the real shim and gateway against a fake MCP server (allow, block, concurrency, timeout, cancel, daemon down, server crash, large and unicode data, security checks). Manually verified: live Claude Code session, Claude Desktop, Claude Web through a Cloudflare tunnel, daemon autostart, real popup timeout.
+`python -m pytest -q` runs 68 tests, including end-to-end tests that start the real shim and gateway against a fake MCP server (allow, block, concurrency, timeout, cancel, daemon down, server crash, large and unicode data, security checks). Manually verified: live Claude Code session, Claude Desktop, Claude Web through a Cloudflare tunnel, the Figma connector in claude.ai through the browser extension (Edge), daemon autostart, real popup timeout.
 
 ## Project layout
 
