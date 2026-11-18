@@ -28,7 +28,7 @@ Full explanation with diagrams: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 | Keep request pending; release on Allow; deny on Block | Held in the shim/gateway; Allow forwards the original message; Block returns an `isError` result |
 | Multiple simultaneous requests | One popup per request, independent decisions, queue beyond 3 visible (tested with 20-24 at once) |
 | Runs in background; handles termination, failures, errors | Daemon with tray icon, single instance, autostart by the shim; fail-closed; crash, timeout and cancel handling |
-| Modular, documented, install/run instructions | This README, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), docstrings, 68 tests |
+| Modular, documented, install/run instructions | This README, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), docstrings, 69 tests |
 
 ## Coverage: what is intercepted, and how
 
@@ -60,7 +60,7 @@ python -m venv .venv
 
 ```bash
 .venv\Scripts\python scripts\popup_demo.py      # three simultaneous popups from a fake server
-.venv\Scripts\python -m pytest -q               # 68 tests
+.venv\Scripts\python -m pytest -q               # 69 tests
 ```
 
 ## Use it with Claude Desktop or Claude Code
@@ -148,7 +148,7 @@ Logs in the same folder: `audit.jsonl` (every request and decision), `daemon.log
 
 ## Tests
 
-`python -m pytest -q` runs 68 tests, including end-to-end tests that start the real shim and gateway against a fake MCP server (allow, block, concurrency, timeout, cancel, daemon down, server crash, large and unicode data, security checks). Manually verified: live Claude Code session, Claude Desktop, Claude Web through a Cloudflare tunnel, the Figma connector in claude.ai through the browser extension (Edge), daemon autostart, real popup timeout.
+`python -m pytest -q` runs 69 tests, including end-to-end tests that start the real shim and gateway against a fake MCP server (allow, block, concurrency, timeout, cancel, daemon down, server crash, large and unicode data, security checks). Manually verified: live Claude Code session, Claude Desktop, Claude Web through a Cloudflare tunnel, the Figma connector in claude.ai through the browser extension (Edge), daemon autostart, real popup timeout.
 
 ## Project layout
 

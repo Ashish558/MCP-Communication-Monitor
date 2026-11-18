@@ -32,8 +32,17 @@ def handle(msg):
             "protocolVersion": "2025-06-18", "capabilities": {"tools": {}},
             "serverInfo": {"name": "fake", "version": "1"}}})
     elif method == "tools/list":
+        # Declare the inputs: clients (Claude) only pass arguments the schema lists.
+        schemas = {
+            "echo": ({"text": {"type": "string", "description": "text to echo back"}}, "Echo text back."),
+            "slow": ({"seconds": {"type": "number", "description": "how long to wait"}}, "Wait, then reply."),
+            "crash": ({}, "Exit the server process (test only)."),
+            "count": ({}, "How many echo calls have run."),
+            "big": ({"n": {"type": "integer", "description": "characters to return"}}, "Return a long text."),
+        }
         send({"jsonrpc": "2.0", "id": rpc_id, "result": {"tools": [
-            {"name": n, "inputSchema": {"type": "object"}} for n in ("echo", "slow", "crash", "count", "big")]}})
+            {"name": n, "description": desc, "inputSchema": {"type": "object", "properties": props}}
+            for n, (props, desc) in schemas.items()]}})
     elif method == "tools/call":
         name = msg["params"]["name"]
         args = msg["params"].get("arguments", {})

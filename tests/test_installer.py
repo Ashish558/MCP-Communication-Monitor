@@ -124,3 +124,8 @@ def test_desktop_config_path_finds_the_microsoft_store_package(tmp_path, monkeyp
     folder = tmp_path / "Packages" / "Claude_abc123" / "LocalCache" / "Roaming" / "Claude"
     folder.mkdir(parents=True)
     assert inst.desktop_config_path() == folder / "claude_desktop_config.json"
+    # Newer Store builds: the live config sits in Claude-Data and beats both
+    live = tmp_path / "Claude-Data" / "claude_abc123"
+    live.mkdir(parents=True)
+    (live / "claude_desktop_config.json").write_text("{}", encoding="utf-8")
+    assert inst.desktop_config_path() == live / "claude_desktop_config.json"

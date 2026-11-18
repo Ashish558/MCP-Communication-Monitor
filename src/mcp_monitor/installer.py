@@ -42,9 +42,13 @@ class InstallerError(Exception):
 
 def desktop_config_path() -> Path:
     if os.name == "nt":
-        # The Microsoft Store (MSIX) build keeps its "Roaming" data inside the package folder:
-        #   %LOCALAPPDATA%\Packages\Claude_<id>\LocalCache\Roaming\Claude
+        # Newer Microsoft Store (MSIX) builds keep the live config under
+        #   %LOCALAPPDATA%\Claude-Data\claude_<id>\claude_desktop_config.json
+        # older ones under %LOCALAPPDATA%\Packages\Claude_<id>\LocalCache\Roaming\Claude, and
+        # classic installs under %APPDATA%\Claude. Use the first that really exists.
         local = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+        for candidate in sorted((local / "Claude-Data").glob("*/claude_desktop_config.json")):
+            return candidate
         for package in sorted((local / "Packages").glob("Claude_*")):
             folder = package / "LocalCache" / "Roaming" / "Claude"
             if folder.is_dir():
