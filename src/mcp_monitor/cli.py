@@ -43,6 +43,18 @@ def _build_parser() -> argparse.ArgumentParser:
     target_args(r, servers=False)
     r.add_argument("--from", dest="backup_file", type=Path, help="specific backup file")
 
+    g = sub.add_parser("gateway", help="HTTP gateway for Claude Web (put a tunnel in front of it)")
+    g.add_argument("--name", required=True, help="server name shown in popups")
+    g.add_argument("--url", help="upstream HTTP MCP endpoint to protect (instead of a stdio command)")
+    g.add_argument("--header", action="append", default=[], metavar="K=V",
+                   help="extra header for the upstream URL, e.g. Authorization=Bearer ... (repeatable)")
+    g.add_argument("--host", default="127.0.0.1", help="bind address (keep 127.0.0.1; the tunnel connects locally)")
+    g.add_argument("--port", type=int, default=8765)
+    g.add_argument("--public-url", help="the tunnel's https URL, used only to print the connector URL")
+    g.add_argument("--label", default="claude-web", help="client label shown in popups")
+    g.add_argument("--rotate-token", action="store_true", help="invalidate the old connector URL")
+    g.add_argument("command", nargs=argparse.REMAINDER, help="-- <stdio server command...> (if no --url)")
+
     s = sub.add_parser("shim", help="(internal) proxy in front of one MCP server")
     s.add_argument("--server-name", required=True)
     s.add_argument("--client", default="unknown")
@@ -63,6 +75,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "daemon":
         return _daemon(args)
+
+    if args.cmd == "gateway":
+        return _gateway(args)
 
     if args.cmd == "status":
         from .ipc import ping
@@ -96,6 +111,46 @@ def main(argv: list[str] | None = None) -> int:
     except installer.InstallerError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+    return 0
+
+
+def _gateway(args: argparse.Namespace) -> int:
+    try:
+        from aiohttp import web
+    except ImportError:
+        print('The gateway needs aiohttp:  pip install -e ".[gateway]"', file=sys.stderr)
+        return 1
+    from .gateway import create_app
+    from .gateway.app import load_token
+    from .gateway.upstream import HttpUpstream, StdioUpstream
+
+    command = args.command[1:] if args.command[:1] == ["--"] else args.command
+    if bool(args.url) == bool(command):
+        print("Give exactly one upstream: --url URL  or  -- <stdio command...>", file=sys.stderr)
+        return 2
+    if args.host not in ("127.0.0.1", "localhost", "::1"):
+        print("warning: binding to a non-local address exposes the gateway directly; "
+              "use a tunnel in front of 127.0.0.1 instead.", file=sys.stderr)
+    settings = Settings.load()
+    home = data_dir()
+    home.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(filename=str(home / "gateway.log"), level=getattr(logging, settings.log_level, logging.INFO),
+                        format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    if args.url:
+        headers = dict(h.split("=", 1) for h in args.header if "=" in h)
+        upstream = HttpUpstream(args.url, headers)
+    else:
+        upstream = StdioUpstream(command)
+    token = load_token(home, rotate=args.rotate_token)
+    app = create_app(upstream, settings, args.name, token, label=args.label)
+    base = (args.public_url or f"http://{args.host}:{args.port}").rstrip("/")
+    print(f"MCP Monitor gateway for {args.name!r} listening on {args.host}:{args.port}", flush=True)
+    print(f"Connector URL (keep it secret): {base}/mcp/{token}", flush=True)
+    if not args.public_url:
+        print("Start a tunnel to the port above, then use <tunnel https URL>/mcp/<token> in claude.ai.", flush=True)
+    # access_log=None: the access log would contain the secret path.
+    # handler_cancellation: if Claude hangs up while a popup is open, the pending request is withdrawn.
+    web.run_app(app, host=args.host, port=args.port, access_log=None, print=None, handler_cancellation=True)
     return 0
 
 

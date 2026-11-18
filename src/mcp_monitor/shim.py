@@ -31,7 +31,8 @@ from typing import BinaryIO, Callable
 
 from . import protocol
 from .config import Settings, data_dir
-from .ipc import DaemonClient, DaemonUnavailable, Decision, new_ref
+from .gatekeeper import Gatekeeper
+from .ipc import DaemonClient, Decision, new_ref
 from .jobobject import KillOnCloseJob
 
 log = logging.getLogger("mcp_monitor.shim")
@@ -57,7 +58,8 @@ class Shim:
         self._stdin = stdin or sys.stdin.buffer
         self._stdout = stdout or sys.stdout.buffer
         self._exit_fn = exit_fn
-        self._intercept = frozenset() if settings.disabled else frozenset(settings.intercept_methods)
+        self.gate = Gatekeeper(settings, self.client, server_name)
+        self._intercept = self.gate.methods
 
         self._child: subprocess.Popen | None = None
         self._job = KillOnCloseJob()
@@ -234,24 +236,7 @@ class Shim:
             self._write_client(protocol.encode(protocol.denial_response(msg, decision.reason)))
 
     def _ask(self, ref: str, msg: dict) -> Decision:
-        call = protocol.describe(msg)
-        text, size = protocol.preview(call.arguments, self.settings.preview_max_chars)
-        info = {
-            "client": protocol.sanitize_text(self.client_name),
-            "server": protocol.sanitize_text(self.server_name),
-            "method": call.method,
-            "tool": protocol.sanitize_text(call.name),
-            "arguments_preview": text,
-            "arguments_size": size,
-        }
-        try:
-            return self.client.decide(ref, info, timeout=self.settings.decision_timeout + 5)
-        except DaemonUnavailable as exc:
-            if self.settings.fail_mode == "open":
-                log.warning("monitor unavailable (%s): allowing because fail_mode=open", exc)
-                return Decision("allow", "monitor unavailable (fail-open)")
-            log.warning("monitor unavailable (%s): blocking", exc)
-            return Decision("block", "The monitor is not running, so the request was blocked for safety.")
+        return self.gate.ask(ref, msg, self.client_name)
 
     def _handle_batch(self, items: list, line: bytes) -> None:
         """JSON-RPC batch: decide each intercepted item, forward the rest as one batch."""

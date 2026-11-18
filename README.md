@@ -2,7 +2,7 @@
 
 Python app that sits between Claude and its MCP servers and asks you **Allow** or **Block** for every tool call, in a popup that appears on top of your other windows. A blocked call is never executed; Claude receives a clear denial instead.
 
-> **Status:** local stdio interception (Claude Code app + Claude Desktop local servers) is implemented and tested. The Claude Web gateway is the next phase, see [plan.md](plan.md).
+> **Status:** local stdio interception (Claude Code app + Claude Desktop local servers) is implemented and verified in a live Claude Code session. The Claude Web gateway is implemented and covered by automated tests; testing it against real claude.ai through a tunnel is the next step. See [plan.md](plan.md).
 
 ## How it works (short)
 
@@ -54,6 +54,28 @@ python -m venv .venv
 
 Other commands: `list`, `doctor`, `status`, `uninstall`, `restore` (all take `--target`).
 
+## Claude Web (claude.ai) through the gateway
+
+Claude Web calls MCP servers from Anthropic's cloud, not from your PC, so nothing on your machine can see those calls. The only place to intercept is the MCP endpoint itself: the **gateway** is that endpoint. It speaks MCP "Streamable HTTP" to Claude, asks you in the same popup, and forwards approved calls to the real server.
+
+```
+claude.ai --HTTPS--> tunnel --> [gateway 127.0.0.1:8765] --> real MCP server (stdio child or upstream URL)
+                                      |
+                                      +--> [daemon: popup, queue, audit log]
+```
+
+1. `pip install -e ".[gateway]"`, and start the daemon as above.
+2. Start the gateway in front of a server (stdio command after `--`, or `--url` for an existing HTTP MCP endpoint):
+
+   ```bash
+   .venv\Scripts\python -m mcp_monitor gateway --name my-files --port 8765 -- npx -y @modelcontextprotocol/server-filesystem C:\some\folder
+   .venv\Scripts\python -m mcp_monitor gateway --name my-api --url https://api.example.com/mcp --header "Authorization=Bearer <token>"
+   ```
+3. Expose port 8765 with a tunnel, for example Cloudflare's quick tunnel (no account needed): `cloudflared tunnel --url http://127.0.0.1:8765`
+4. In claude.ai: Settings > Connectors > Add custom connector, URL = `https://<tunnel-host>/mcp/<token>` (the gateway prints the token path; `--public-url https://<tunnel-host>` makes it print the full URL).
+
+Gateway security: the URL contains a secret token (`--rotate-token` invalidates it); wrong paths return a bare 404; requests carrying a browser `Origin` other than claude.ai/claude.com are rejected; bodies over 10 MB are rejected; the access log is disabled because it would contain the token; the gateway binds to 127.0.0.1 only and the daemon port is never exposed. Even with a leaked URL, every `tools/call` still needs your click. Not supported (refused with a clear error, never silently allowed): JSON-RPC batches and server-initiated messages (GET streams). Connectors added directly in claude.ai, without this gateway, are not covered.
+
 ## Undo / safety net
 
 * Every config change is preceded by a backup in `backups/config/` (timestamped; the first backup, `*.original.json`, is never overwritten).
@@ -85,7 +107,7 @@ Logs in the same folder: `audit.jsonl` (every request and decision), `daemon.log
 ## Tests and demo
 
 ```bash
-.venv\Scripts\python -m pytest -q                    # 38+ tests: protocol, installer, end-to-end with a fake MCP server
+.venv\Scripts\python -m pytest -q                    # 58 tests: protocol, installer, shim and gateway end-to-end with a fake MCP server
 .venv\Scripts\python scripts\popup_demo.py           # shows 3 real concurrent popups
 ```
 
@@ -95,6 +117,8 @@ Logs in the same folder: `audit.jsonl` (every request and decision), `daemon.log
 src/mcp_monitor/
   protocol.py   JSON-RPC helpers, redaction, display sanitising
   shim.py       stdio proxy (hold / forward / deny, crash handling)
+  gatekeeper.py shared "ask the daemon, apply fail mode" logic
+  gateway/      HTTP gateway for Claude Web (app, stdio/HTTP upstreams)
   ipc.py        shim <-> daemon channel (127.0.0.1 + token)
   daemon/       broker (queue, timeouts, cancel), Tk popups, tray, audit log
   installer.py  backup-first config wrapping / unwrapping
@@ -104,7 +128,7 @@ tests/          unit + end-to-end tests, fake MCP server
 
 ## Known limits
 
-* Claude Web calls MCP servers from Anthropic's cloud, so it can only be covered through the gateway (next phase); connectors added directly in claude.ai bypass the monitor.
+* Claude Web calls MCP servers from Anthropic's cloud, so it is only covered for connectors routed through the gateway; connectors added directly in claude.ai bypass the monitor.
 * Notifications have no reply and cannot be blocked; JSON-RPC batches are decided per item.
 * Popups open on the primary monitor.
 * A user with admin rights can bypass the monitor by editing the config back; `doctor` reports unmonitored servers.

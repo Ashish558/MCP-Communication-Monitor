@@ -13,7 +13,9 @@ dependencies = []
 [project.optional-dependencies]
 # System-tray icon for the background daemon (the daemon works without it).
 tray = ["pystray>=0.19", "Pillow>=10"]
-dev = ["pytest>=8"]
+# HTTP gateway for Claude Web.
+gateway = ["aiohttp>=3.9"]
+dev = ["pytest>=8", "aiohttp>=3.9"]
 
 [project.scripts]
 mcp-monitor = "mcp_monitor.cli:main"
