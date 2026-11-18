@@ -24,6 +24,8 @@ Declining (button or Esc) is never delayed.
 3. Open the extension's **Options**, paste the token, click **Save and test** (it should say "Connected").
 4. Use claude.ai with a connector. Each tool call now needs your answer in the MCP Monitor popup, after claude.ai's own prompt is approved.
 
+Verified on real claude.ai with the Figma connector in Microsoft Edge: claude.ai's prompt, then the MCP Monitor popup, then Allow ran the call.
+
 ## Limits (be aware)
 
 * It works **only when claude.ai shows its approval prompt**. If a tool was set to "Always allow" earlier, claude.ai runs it without asking and the extension sees nothing. Reset such tools to "Needs approval" in the connector's settings.
