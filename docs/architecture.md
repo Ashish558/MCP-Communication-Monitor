@@ -147,7 +147,7 @@ The full security model (controls, trust boundaries, limits) is in [security.md]
 
 ## 9. Known limitations
 
-* Connectors that Anthropic runs inside Claude Desktop or Claude Code cannot be intercepted by any program on the PC.
+* Claude.ai connectors (Figma, Gmail...) used inside Claude Desktop or Claude Code still work normally but are not monitored: they go through Anthropic's servers, not through our shim or gateway. Interception there was not attempted.
 * Connectors added in claude.ai are covered only by the best-effort browser extension.
 * The gateway refuses JSON-RPC batches and does not support server-initiated streams.
 

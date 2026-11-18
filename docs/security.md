@@ -30,7 +30,7 @@ It lets a person decide, one request at a time, whether an AI client may run an 
 * **Tokens at rest** are plain files in the user's data folder (`gateway.json`, `bridge.json`, `daemon.json`). Rotate a token by deleting its file or with `--rotate-token`.
 * **Tunnel providers** (Cloudflare, ngrok) can see the traffic that passes through the tunnel. Do not put secrets in tools you expose through a demo tunnel.
 * **The extension reads claude.ai's own prompt.** It sees the parameters as displayed, which may differ from the raw request, and a redesign of that prompt can make it stop working (it then fails safe: nothing is allowed that you did not click).
-* **Tools the monitor cannot see:** connectors that Anthropic's cloud runs inside Claude Desktop or Claude Code are out of reach of any program on the PC.
+* **Tools the monitor does not see:** claude.ai connectors (Figma, Gmail...) used inside Claude Desktop or Claude Code go through Anthropic's servers, not through the shim or gateway, so no popup appears for them. They keep working normally; interception there was not attempted.
 * **Audit log contents:** parameters are masked for secrets only by key name and value shape. Personal data in ordinary text is not detected; use `log_arguments: false` if that matters.
 
 See also: [edge cases](edge-cases.md) and [architecture](architecture.md).

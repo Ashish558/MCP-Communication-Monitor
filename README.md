@@ -88,7 +88,7 @@ docs/            documentation
 
 ## Known limits
 
-* Connectors that Anthropic runs inside Claude Desktop or Claude Code cannot be intercepted by any program on the PC.
+* Claude.ai connectors (Figma, Gmail...) used inside Claude Desktop or Claude Code still work normally but are not monitored: they go through Anthropic's servers, not through our shim or gateway. Interception there was not attempted.
 * The browser extension works only when claude.ai shows its own approval prompt; it is best effort.
 * Developed and tested on Windows; popups open on the primary monitor; the daemon does not start at login.
 * The browser extension is JavaScript, because browser extensions cannot be written in Python. Everything else is Python.
