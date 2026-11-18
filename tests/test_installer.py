@@ -1,3 +1,4 @@
+import os
 import json
 
 import pytest
@@ -111,3 +112,15 @@ def test_list_and_doctor(cfg):
     inst.install(path, "claude-desktop", ["files"], backup_dir=bk)
     assert dict(inst.list_servers(path))["files"] == "wrapped"
     assert any("files: monitored" in line for line in inst.doctor(path))
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Microsoft Store layout is Windows only")
+def test_desktop_config_path_finds_the_microsoft_store_package(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setenv("APPDATA", str(tmp_path / "roaming"))
+    # no Store package: the classic %APPDATA% location is used
+    assert inst.desktop_config_path() == tmp_path / "roaming" / "Claude" / "claude_desktop_config.json"
+    # Store package present: its private Roaming folder wins
+    folder = tmp_path / "Packages" / "Claude_abc123" / "LocalCache" / "Roaming" / "Claude"
+    folder.mkdir(parents=True)
+    assert inst.desktop_config_path() == folder / "claude_desktop_config.json"

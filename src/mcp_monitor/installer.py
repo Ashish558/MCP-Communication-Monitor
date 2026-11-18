@@ -42,6 +42,13 @@ class InstallerError(Exception):
 
 def desktop_config_path() -> Path:
     if os.name == "nt":
+        # The Microsoft Store (MSIX) build keeps its "Roaming" data inside the package folder:
+        #   %LOCALAPPDATA%\Packages\Claude_<id>\LocalCache\Roaming\Claude
+        local = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+        for package in sorted((local / "Packages").glob("Claude_*")):
+            folder = package / "LocalCache" / "Roaming" / "Claude"
+            if folder.is_dir():
+                return folder / "claude_desktop_config.json"
         return Path(os.environ.get("APPDATA", str(Path.home() / "AppData" / "Roaming"))) / "Claude" / "claude_desktop_config.json"
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
@@ -58,7 +65,11 @@ def resolve_target(target: str) -> tuple[Path, str]:
 # --------------------------------------------------------------------------- config I/O
 def load_config(path: Path) -> dict:
     if not path.is_file():
-        raise InstallerError(f"config file not found: {path}")
+        hint = ""
+        if path.name == "claude_desktop_config.json":
+            hint = (" (open Claude Desktop > Settings > Developer > Edit Config once so it creates the file, "
+                    "add your server under \"mcpServers\", then run this again)")
+        raise InstallerError(f"config file not found: {path}{hint}")
     try:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as exc:
