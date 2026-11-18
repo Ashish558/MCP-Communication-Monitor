@@ -5,28 +5,36 @@
   body { background:#1a1a1a; color:#eee; font:15px system-ui,sans-serif; padding:24px; }
   .prompt { background:#2b2b2b; border-radius:12px; padding:16px; max-width:760px; }
   .chip { background:#444; border-radius:6px; padding:1px 8px; margin:0 4px; }
-  .row { background:#3a3a3a; border-radius:8px; padding:10px 14px; margin:10px 0; display:flex; gap:24px; }
-  .row span:first-child { color:#aaa; }
+  .params { background:#3a3a3a; border-radius:8px; padding:10px 14px; margin:10px 0; }
+  .row { display:flex; gap:24px; margin:4px 0; }
+  .row span:first-child { color:#aaa; min-width:90px; }
   .buttons { display:flex; justify-content:space-between; margin-top:12px; }
   button { background:#444; color:#fff; border:0; border-radius:8px; padding:8px 14px; font:inherit; }
   kbd { background:#555; border-radius:4px; padding:0 5px; margin-left:4px; font-size:12px; }
   #result { margin-top:20px; font:600 18px Consolas,monospace; }
 </style>
+<!-- Same shape as the real claude.ai prompt: NO whitespace between a button label and its shortcut keys. -->
 <div class="prompt" id="prompt">
-  <div>Claude wants to use <span class="chip">get_design_context</span> from <span class="chip">Figma</span></div>
-  <div class="row"><span>fileKey</span><span>LpQv6kb7I7uXudGrRuL8N5</span></div>
-  <div>Get design context</div>
+  <div>Claude wants to use <span class="chip">Create Session</span> from <span class="chip">Figma</span></div>
+  <div class="params">
+    <div class="row"><span>Description</span><span>Describe the contents of this Figma file (read-only)</span></div>
+    <div class="row"><span>File key</span><span>LpQv6kb7I7uXudGrRuL8N5</span></div>
+  </div>
+  <div>Create Session</div>
+  <div>Create a session to record the user's current work involving a Figma file. Call once before the first read or edit...</div>
+  <div>Show more</div>
+  <div>Takes 2 inputs: fileKey and description</div>
   <div class="buttons">
-    <button id="decline">Decline <kbd>Esc</kbd></button>
+    <button id="decline">Decline<kbd>Esc</kbd></button>
     <span>
-      <button id="always">Always allow <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>⏎</kbd></button>
-      <button id="once">Allow once <kbd>Ctrl</kbd><kbd>⏎</kbd></button>
+      <button id="once">Allow once<kbd>Ctrl</kbd><kbd>⏎</kbd></button>
+      <button id="always">Always allow<kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>⏎</kbd></button>
     </span>
   </div>
 </div>
 <div id="result">RESULT: (nothing yet)</div>
 <script>
-  // Stand-in for the extension background worker: answers from ?v=allow|block and records what it was asked.
+  // Stand-in for the extension background worker: answers from ?v=allow|block|error and records what it was asked.
   window.__calls = [];
   window.chrome = { runtime: { sendMessage: async (msg) => {
     window.__calls.push(msg);

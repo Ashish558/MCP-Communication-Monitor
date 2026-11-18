@@ -12,25 +12,29 @@
   if (window.__mcpMonitorLoaded) return;
   window.__mcpMonitorLoaded = true;
 
+  // No trailing \b: claude.ai prints the shortcut hint straight after the label with no space,
+  // so a button's text is e.g. "Allow onceCtrl⏎" and "once" is not followed by a word boundary.
   const LABEL = {
-    decline: /^\s*decline\b/i,
-    once: /^\s*allow once\b/i,
-    always: /^\s*always allow\b/i,
+    decline: /^\s*decline/i,
+    once: /^\s*allow once/i,
+    always: /^\s*always allow/i,
   };
+  const BUTTONS = 'button, [role="button"]';
+  console.debug("[MCP Monitor] content script active on", location.hostname);
   const bypass = new WeakSet(); // buttons we click ourselves
   let waiting = false; // a request is currently waiting for the user's decision
 
   // ---- finding the prompt ------------------------------------------------------------
   function findPrompt() {
-    const buttons = Array.from(document.querySelectorAll("button"));
+    const buttons = Array.from(document.querySelectorAll(BUTTONS));
     const once = buttons.find((b) => LABEL.once.test(b.textContent || ""));
     if (!once) return null;
     // climb to the smallest ancestor that holds the sentence and the Decline button
     let root = once;
-    for (let i = 0; i < 10 && root; i++, root = root.parentElement) {
+    for (let i = 0; i < 12 && root; i++, root = root.parentElement) {
       const text = root.innerText || "";
-      if (/wants to use/i.test(text) && Array.from(root.querySelectorAll("button")).some((b) => LABEL.decline.test(b.textContent || ""))) {
-        const within = Array.from(root.querySelectorAll("button"));
+      if (/wants to use/i.test(text) && Array.from(root.querySelectorAll(BUTTONS)).some((b) => LABEL.decline.test(b.textContent || ""))) {
+        const within = Array.from(root.querySelectorAll(BUTTONS));
         return {
           root,
           once: within.find((b) => LABEL.once.test(b.textContent || "")),
@@ -57,8 +61,13 @@
     const m2 = joined.match(/wants to use\s+(.+?)\s+from\s+(.+?)(?:\s{2,}|$)/i);
     const tool = (m && m[1]) || (m2 && m2[1]) || "unknown tool";
     const server = (m && m[2]) || (m2 && m2[2]) || "unknown connector";
-    const details = lines
-      .slice(headerIdx + 1)
+    // The parameter rows come first; claude.ai then repeats the tool title and adds a long tool
+    // description ("Show more", "Takes N inputs", "Raw schema"). Keep only the parameter rows.
+    const body = lines.slice(headerIdx + 1);
+    const stop = body.findIndex(
+      (l) => l.toLowerCase() === tool.trim().toLowerCase() || /^show more$/i.test(l) || /^takes \d+ input/i.test(l)
+    );
+    const details = (stop >= 0 ? body.slice(0, stop) : body)
       .filter((l) => !LABEL.decline.test(l) && !LABEL.once.test(l) && !LABEL.always.test(l))
       .filter((l) => !l.split(/\s+/).every((w) => KEYCAP.test(w)))
       .join("\n");
@@ -92,6 +101,7 @@
     waiting = true;
     banner("MCP Monitor: waiting for your decision in the popup on your PC…", false);
     const info = describe(prompt);
+    console.debug("[MCP Monitor] holding approval for", info.tool, "from", info.server);
     let verdict = "block";
     let note = "";
     try {
@@ -132,7 +142,7 @@
   window.addEventListener(
     "click",
     (e) => {
-      const btn = e.target instanceof Element ? e.target.closest("button") : null;
+      const btn = e.target instanceof Element ? e.target.closest(BUTTONS) : null;
       if (!btn || bypass.has(btn)) {
         if (btn) bypass.delete(btn);
         return;
