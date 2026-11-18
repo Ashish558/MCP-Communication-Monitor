@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 from dataclasses import dataclass
 from typing import Callable
@@ -29,6 +30,7 @@ from .ipc import DaemonClient, new_ref
 log = logging.getLogger("mcp_monitor.hook")
 
 CLIENT_LABEL = "claude-code (hook)"
+_UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE)
 
 
 @dataclass
@@ -79,6 +81,8 @@ def handle_payload(payload: object, settings: Settings, gate_factory: GateFactor
         server_id, tool = parsed
         mcp = payload.get("mcp_server")
         server = mcp["name"] if isinstance(mcp, dict) and isinstance(mcp.get("name"), str) else server_id
+        if server == server_id and _UUID.match(server_id):
+            server = f"claude.ai connector ({server_id[:8]})"   # Desktop names connectors by id
         if server in settings.hook_skip_servers or server_id in settings.hook_skip_servers:
             return HookResult(0)                                  # e.g. already covered by a shim
         arguments = payload.get("tool_input")

@@ -53,6 +53,13 @@ def test_server_name_falls_back_to_the_tool_prefix(daemon, home):
     assert daemon.presenter.shown[0].server == "5d2a533c-uuid"
 
 
+def test_connector_ids_get_a_readable_label(daemon, home):
+    # Claude Desktop names claude.ai connectors by id: mcp__<uuid>__<tool>
+    uuid = "5d2a533c-5b1d-4420-8bd4-582ca09d0d8c"
+    handle_payload(payload(f"mcp__{uuid}__whoami", {"x": "allow-me"}), Settings.load(home))
+    assert daemon.presenter.shown[0].server == "claude.ai connector (5d2a533c)"
+
+
 def test_secrets_in_tool_input_are_masked_in_the_popup(daemon, home):
     handle_payload(payload(args={"api_key": "sk-abcdefghijklmnopqrstuv", "note": "allow-me"}), Settings.load(home))
     assert "sk-abcdefghijklmnopqrstuv" not in daemon.presenter.shown[0].arguments_preview

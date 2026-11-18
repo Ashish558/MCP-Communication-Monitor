@@ -11,7 +11,7 @@ Results of the automated test suite, captured from a real run. For what the test
 | Python | 3.13.1 |
 | Libraries | pytest 9.2.0, aiohttp 3.14.5, pystray 0.19.5, Pillow 13.0.0 |
 | Command | `python -m pytest -v` |
-| Result | **96 passed in 42.24s** (0 failed, 0 skipped) |
+| Result | **97 passed in 42.39s** (0 failed, 0 skipped) |
 
 ## Results by file
 
@@ -21,11 +21,11 @@ Results of the automated test suite, captured from a real run. For what the test
 | `tests/test_bridge.py` | 9 | Browser bridge: token, origins (Chrome and Edge), size limits, masking, fail closed |
 | `tests/test_broker.py` | 1 | Cap on simultaneous requests |
 | `tests/test_gateway.py` | 20 | Real HTTP gateway: sessions, tokens, origins, concurrency, hang-ups, cancel, crash, HTTP upstream and streamed replies |
-| `tests/test_hook.py` | 23 | Claude Code hook: allow/block answers, popup details, every failure blocks, the real hook process, settings-file installer |
+| `tests/test_hook.py` | 24 | Claude Code hook: allow/block answers, popup details, every failure blocks, the real hook process, settings-file installer |
 | `tests/test_installer.py` | 12 | Config wrap/unwrap, backups, dry run, undo, corrupt files, Store-install path |
 | `tests/test_integration.py` | 17 | Real shim process + fake MCP server + daemon: allow, block, concurrency, timeout, cancel, daemon down/stopped, crash, batches, garbage input |
 | `tests/test_protocol.py` | 12 | Message classification, denial replies, id handling, secret masking, text sanitising, previews |
-| **Total** | **96** | |
+| **Total** | **97** | |
 
 The tests start the real shim, gateway and hook as separate processes against a fake MCP server (`tests/fake_mcp_server.py`), and use a rule-driven stand-in for the popup, so they run without a person. They use a temporary data folder and never touch real Claude config. A passing "block" test means the request really was blocked and never reached the server.
 
@@ -41,6 +41,8 @@ A real `claude` process was run in a throwaway project with the hook registered,
 | Hook + no daemon, autostart off | Not run: "The monitor is not running, so the request was blocked for safety" |
 | Hook + real popup, user clicked Allow | Ran (decision recorded as "Allowed by the user") |
 | Hook + real popup, user clicked Block | Not run: "Blocked by the user" |
+| Same hook in **Claude Desktop's Code tab** (new session on the project), real popup: Allow, then Block | Popup appeared both times; Allow ran, Block stopped it. The connector appears there by id (`mcp__<id>__whoami`) |
+| Fake server covered by both the shim and the hook, in a Code session | Two popups per call (hook first, then shim), as documented |
 
 ## Real use recorded by the app's own audit log
 
@@ -48,12 +50,12 @@ Besides the automated tests, the app was used with the real Claude apps during d
 
 | Interception path | Decisions | Allowed | Blocked by the user | Blocked by timeout |
 |---|---|---|---|---|
-| Shim: Claude Desktop | 11 | 7 | 3 | 1 |
+| Shim: Claude Desktop | 12 | 8 | 3 | 1 |
 | Shim: Claude Code | 5 | 3 | 1 | 1 |
 | Gateway: Claude Web | 2 | 2 | 0 | 0 |
 | Browser extension: claude.ai connectors (Figma and test connectors) | 12 | 11 | 1 | 0 |
-| Claude Code hook: claude.ai Figma connector | 3 | 2 | 1 | 0 |
-| **Total** | **33** | **25** | **6** | **2** |
+| Claude Code hook (terminal and Claude Desktop's Code tab) | 7 | 4 | 3 | 0 |
+| **Total** | **38** | **28** | **8** | **2** |
 
 Notes: Desktop entries come from Claude Desktop's agent-mode sessions. The gateway's block path in real use was not recorded in this log; it is covered by the automated tests (for example `test_blocked_call_never_reaches_server`).
 
@@ -97,6 +99,7 @@ PASSED  tests/test_hook.py::test_allowed_mcp_call_returns_the_documented_allow_j
 PASSED  tests/test_hook.py::test_blocked_mcp_call_exits_2_with_a_reason_for_claude
 PASSED  tests/test_hook.py::test_popup_shows_server_tool_parameters_and_the_hook_client
 PASSED  tests/test_hook.py::test_server_name_falls_back_to_the_tool_prefix
+PASSED  tests/test_hook.py::test_connector_ids_get_a_readable_label
 PASSED  tests/test_hook.py::test_secrets_in_tool_input_are_masked_in_the_popup
 PASSED  tests/test_hook.py::test_skip_servers_setting_leaves_a_covered_server_alone
 PASSED  tests/test_hook.py::test_disable_switch_makes_the_hook_a_no_op
