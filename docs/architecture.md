@@ -161,4 +161,4 @@ The complete list, with reasons, is in [edge-cases.md](edge-cases.md#9-known-gap
 
 ## 10. Testing
 
-97 automated tests plus manual checks on the real Claude apps. See [testing.md](testing.md).
+100 automated tests plus manual checks on the real Claude apps. See [testing.md](testing.md).

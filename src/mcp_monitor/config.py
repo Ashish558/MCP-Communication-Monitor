@@ -51,7 +51,9 @@ class Settings:
     autostart_daemon: bool = True      # shim starts the daemon if it is not running
     preview_max_chars: int = 4000      # parameter text shown in the popup / audit log
     log_arguments: bool = True         # False: the audit log records decisions but not parameters
-    hook_skip_servers: tuple = ()      # Claude Code hook: MCP servers it should not ask about (e.g. ones a shim covers)
+    # Claude Code hook: MCP servers it does not ask about (wildcards allowed). Default: the Claude app's own
+    # internal tools (task list, session helpers), which would otherwise open a popup for every plan update.
+    hook_skip_servers: tuple = ("ccd_*",)
     button_delay_ms: int = 600         # buttons are inert this long after a popup appears
     log_level: str = "INFO"
     disabled: bool = False             # pass-through mode (emergency off switch)

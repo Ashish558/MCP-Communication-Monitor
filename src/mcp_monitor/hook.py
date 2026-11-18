@@ -16,6 +16,7 @@ Non-MCP tools (Bash, Edit, ...) are not this app's business: no output, exit 0.
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import logging
 import re
@@ -51,6 +52,11 @@ def split_mcp_tool(tool_name: str) -> tuple[str, str] | None:
     return server, tool
 
 
+def _skipped(settings: Settings, *names: str) -> bool:
+    """True if any of ``names`` matches a ``hook_skip_servers`` pattern (shell-style wildcards)."""
+    return any(fnmatch.fnmatchcase(name, pattern) for pattern in settings.hook_skip_servers for name in names)
+
+
 def _deny(reason: str) -> HookResult:
     return HookResult(2, "", f"Blocked by MCP Monitor. {reason}".strip())
 
@@ -83,8 +89,8 @@ def handle_payload(payload: object, settings: Settings, gate_factory: GateFactor
         server = mcp["name"] if isinstance(mcp, dict) and isinstance(mcp.get("name"), str) else server_id
         if server == server_id and _UUID.match(server_id):
             server = f"claude.ai connector ({server_id[:8]})"   # Desktop names connectors by id
-        if server in settings.hook_skip_servers or server_id in settings.hook_skip_servers:
-            return HookResult(0)                                  # e.g. already covered by a shim
+        if _skipped(settings, server, server_id):
+            return HookResult(0)        # covered by a shim, or one of the Claude app's own internal tools
         arguments = payload.get("tool_input")
         if not isinstance(arguments, dict):
             arguments = {} if arguments is None else {"input": arguments}

@@ -11,7 +11,7 @@ Results of the automated test suite, captured from a real run. For what the test
 | Python | 3.13.1 |
 | Libraries | pytest 9.2.0, aiohttp 3.14.5, pystray 0.19.5, Pillow 13.0.0 |
 | Command | `python -m pytest -v` |
-| Result | **97 passed in 42.39s** (0 failed, 0 skipped) |
+| Result | **100 passed in 43.51s** (0 failed, 0 skipped) |
 
 ## Results by file
 
@@ -21,11 +21,11 @@ Results of the automated test suite, captured from a real run. For what the test
 | `tests/test_bridge.py` | 9 | Browser bridge: token, origins (Chrome and Edge), size limits, masking, fail closed |
 | `tests/test_broker.py` | 1 | Cap on simultaneous requests |
 | `tests/test_gateway.py` | 20 | Real HTTP gateway: sessions, tokens, origins, concurrency, hang-ups, cancel, crash, HTTP upstream and streamed replies |
-| `tests/test_hook.py` | 24 | Claude Code hook: allow/block answers, popup details, every failure blocks, the real hook process, settings-file installer |
+| `tests/test_hook.py` | 27 | Claude Code hook: allow/block answers, popup details, every failure blocks, the real hook process, settings-file installer |
 | `tests/test_installer.py` | 12 | Config wrap/unwrap, backups, dry run, undo, corrupt files, Store-install path |
 | `tests/test_integration.py` | 17 | Real shim process + fake MCP server + daemon: allow, block, concurrency, timeout, cancel, daemon down/stopped, crash, batches, garbage input |
 | `tests/test_protocol.py` | 12 | Message classification, denial replies, id handling, secret masking, text sanitising, previews |
-| **Total** | **97** | |
+| **Total** | **100** | |
 
 The tests start the real shim, gateway and hook as separate processes against a fake MCP server (`tests/fake_mcp_server.py`), and use a rule-driven stand-in for the popup, so they run without a person. They use a temporary data folder and never touch real Claude config. A passing "block" test means the request really was blocked and never reached the server.
 
@@ -43,6 +43,7 @@ A real `claude` process was run in a throwaway project with the hook registered,
 | Hook + real popup, user clicked Block | Not run: "Blocked by the user" |
 | Same hook in **Claude Desktop's Code tab** (new session on the project), real popup: Allow, then Block | Popup appeared both times; Allow ran, Block stopped it. The connector appears there by id (`mcp__<id>__whoami`) |
 | Fake server covered by both the shim and the hook, in a Code session | Two popups per call (hook first, then shim), as documented |
+| Hook in a Desktop Code session also asked about the app's own task-list tools (`update_plan`) | Led to skipping the app's internal `ccd_*` tools by default |
 
 ## Real use recorded by the app's own audit log
 
@@ -102,6 +103,9 @@ PASSED  tests/test_hook.py::test_server_name_falls_back_to_the_tool_prefix
 PASSED  tests/test_hook.py::test_connector_ids_get_a_readable_label
 PASSED  tests/test_hook.py::test_secrets_in_tool_input_are_masked_in_the_popup
 PASSED  tests/test_hook.py::test_skip_servers_setting_leaves_a_covered_server_alone
+PASSED  tests/test_hook.py::test_the_claude_apps_own_internal_tools_are_skipped_by_default
+PASSED  tests/test_hook.py::test_skip_list_can_be_emptied_to_gate_everything
+PASSED  tests/test_hook.py::test_skip_patterns_accept_wildcards
 PASSED  tests/test_hook.py::test_disable_switch_makes_the_hook_a_no_op
 PASSED  tests/test_hook.py::test_unanswered_popup_blocks_with_exit_2
 PASSED  tests/test_hook.py::test_daemon_down_blocks_with_exit_2

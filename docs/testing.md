@@ -3,7 +3,7 @@
 ## Run the tests
 
 ```bash
-.venv\Scripts\python -m pytest -q          # 97 tests, about 40 seconds
+.venv\Scripts\python -m pytest -q          # 100 tests, about 40 seconds
 .venv\Scripts\python -m pytest -k block -v # only the tests about blocking, listed by name
 ```
 
@@ -20,7 +20,7 @@ Captured results of the latest run: [test-results.md](test-results.md).
 | `tests/test_gateway.py` | 20 | The real HTTP gateway: sessions, tokens, origins, concurrency, hang-ups, cancel, crash, daemon down, HTTP upstream including streamed replies. |
 | `tests/test_bridge.py` | 9 | The browser bridge: token, origins (Chrome and Edge), size limits, masking, fail closed. |
 | `tests/test_installer.py` | 12 | Config wrapping and unwrapping, backups, dry run, undo, corrupt files, Store-install path. |
-| `tests/test_hook.py` | 24 | The Claude Code hook: allow and block answers, popup details, every failure path blocks, the real hook process, and the settings-file installer. |
+| `tests/test_hook.py` | 27 | The Claude Code hook: allow and block answers, popup details, every failure path blocks, the real hook process, and the settings-file installer. |
 | `tests/test_audit.py` | 2 | What is written to the audit log, and the privacy switch. |
 | `tests/test_broker.py` | 1 | The cap on simultaneous requests. |
 

@@ -27,7 +27,7 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -e ".[tray,gateway]"
 
 .venv\Scripts\python scripts\popup_demo.py     # try it: three simultaneous popups, no Claude needed
-.venv\Scripts\python -m pytest -q              # run the 97 tests
+.venv\Scripts\python -m pytest -q              # run the 100 tests
 ```
 
 To use it with Claude, follow **[docs/setup.md](docs/setup.md)**.
@@ -67,7 +67,7 @@ Full explanation with diagrams: [docs/architecture.md](docs/architecture.md).
 | [docs/security.md](docs/security.md) | Security controls, trust boundaries and limits |
 | [docs/edge-cases.md](docs/edge-cases.md) | Every edge case, what happens, and the test or check that proves it |
 | [docs/testing.md](docs/testing.md) | How to run the tests, what they cover, what was verified by hand |
-| [docs/test-results.md](docs/test-results.md) | Captured results of the 97 tests, and real-use counts from the audit log |
+| [docs/test-results.md](docs/test-results.md) | Captured results of the 100 tests, and real-use counts from the audit log |
 | [extension/README.md](extension/README.md) | The claude.ai browser extension |
 
 ## Project layout
@@ -85,7 +85,7 @@ src/mcp_monitor/
   installer.py   backup-first config wrapping and unwrapping
   cli.py         python -m mcp_monitor <command>
 extension/       claude.ai browser extension (JavaScript)
-tests/           97 tests and a fake MCP server
+tests/           100 tests and a fake MCP server
 scripts/         popup demo, screenshot helper
 docs/            documentation
 ```

@@ -14,7 +14,7 @@ Optional: `%LOCALAPPDATA%\mcp-monitor\config.json` (all keys optional; invalid v
 | `autostart_daemon` | `true` | Lets the shim start the daemon when it is not running. |
 | `preview_max_chars` | `4000` | Length limit for the parameters shown in the popup and written to the log. |
 | `log_arguments` | `true` | Set `false` to keep parameters out of the audit log (decisions are still logged). |
-| `hook_skip_servers` | `[]` | MCP server names the Claude Code hook should leave alone (for example ones a shim already covers). |
+| `hook_skip_servers` | `["ccd_*"]` | MCP server names (wildcards allowed) the Claude Code hook leaves alone: by default the Claude app's own internal tools, plus any you add, for example servers a shim already covers. Set `[]` to gate everything. |
 | `button_delay_ms` | `600` | Allow and Block ignore clicks for this long after a popup appears. |
 | `log_level` | `"INFO"` | Level for the component logs. |
 | `disabled` | `false` | Pass-through mode (usually set with the environment variable below). |

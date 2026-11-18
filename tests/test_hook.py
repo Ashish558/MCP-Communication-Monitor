@@ -71,6 +71,25 @@ def test_skip_servers_setting_leaves_a_covered_server_alone(daemon, home):
     assert result.exit_code == 0 and result.stdout == "" and daemon.presenter.shown == []
 
 
+def test_the_claude_apps_own_internal_tools_are_skipped_by_default(daemon, home):
+    for tool in ("mcp__ccd_turn__update_plan", "mcp__ccd_session__start_session"):
+        result = handle_payload(payload(tool, {"items": []}), Settings.load(home))
+        assert (result.exit_code, result.stdout) == (0, "")
+    assert daemon.presenter.shown == []                       # no popup for the app's own plumbing
+
+
+def test_skip_list_can_be_emptied_to_gate_everything(daemon, home):
+    write_config(home, decision_timeout=3, hook_skip_servers=[])
+    result = handle_payload(payload("mcp__ccd_turn__update_plan", {"x": "block-me"}), Settings.load(home))
+    assert result.exit_code == 2 and len(daemon.presenter.shown) == 1
+
+
+def test_skip_patterns_accept_wildcards(daemon, home):
+    write_config(home, decision_timeout=3, hook_skip_servers=["fake*"])
+    assert handle_payload(payload("mcp__fakefiles__echo", {}), Settings.load(home)).stdout == ""
+    assert daemon.presenter.shown == []
+
+
 def test_disable_switch_makes_the_hook_a_no_op(daemon, home, monkeypatch):
     monkeypatch.setenv("MCP_MONITOR_DISABLE", "1")
     assert handle_payload(payload(args={"n": "block-me"}), Settings.load(home)).exit_code == 0

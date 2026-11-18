@@ -117,6 +117,7 @@ Things to know:
 
 * Only MCP tools are gated; Bash, Edit and other built-in tools are left alone. Narrow it with `--matcher` (a regex on the tool name), for example `mcp__claude_ai_.*` for claude.ai connectors only.
 * **Avoid double popups.** A server already wrapped by the shim (step 2) is also an MCP tool. Skip it with a matcher such as `mcp__(?!myserver__).*`, or list it under `hook_skip_servers` in the [configuration](configuration.md).
+* The Claude app's own internal tools (`ccd_*`, such as its task list) are skipped by default so they do not open a popup for every plan update. Change `hook_skip_servers` if you want them gated too.
 * **Fails closed.** The hook exits with code 2 (Claude Code's "block") on any problem. The installer also sets `"onFailure": "block"` (Claude Code 2.1.295 or newer), so even a hook that cannot start blocks the call.
 * Claude Code's own deny and ask rules still apply on top of the hook.
 * Check with `hook-status --target ...`; undo with `hook-uninstall --target ...` (a backup is made first). Claude Code picks up settings-file changes by itself; restart a running session if it does not.
