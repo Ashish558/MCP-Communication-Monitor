@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "MCP Monitor for claude.ai",
+  "version": "0.1.0",
+  "description": "Holds claude.ai's tool-approval click until you answer in the MCP Monitor popup on your PC.",
+  "permissions": ["storage"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*", "https://claude.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "options_page": "options.html"
+}

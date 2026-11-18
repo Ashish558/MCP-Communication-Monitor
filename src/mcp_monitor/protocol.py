@@ -165,6 +165,15 @@ def sanitize_text(text: str) -> str:
     return "".join(out)
 
 
+def preview_text(text: str, max_chars: int) -> tuple[str, int]:
+    """Same as :func:`preview` for text that is already a string (masked, sanitized, truncated)."""
+    text = redact(str(text))
+    size = len(text)
+    if size > max_chars:
+        text = text[:max_chars] + f"\n… [truncated, {size - max_chars} more characters]"
+    return sanitize_text(text), size
+
+
 def preview(value: Any, max_chars: int) -> tuple[str, int]:
     """Redacted, sanitized, length-limited text of ``value`` plus its original size."""
     try:

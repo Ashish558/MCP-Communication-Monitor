@@ -55,6 +55,10 @@ def _build_parser() -> argparse.ArgumentParser:
     g.add_argument("--rotate-token", action="store_true", help="invalidate the old connector URL")
     g.add_argument("command", nargs=argparse.REMAINDER, help="-- <stdio server command...> (if no --url)")
 
+    b = sub.add_parser("bridge", help="local endpoint for the claude.ai browser extension (Web connectors)")
+    b.add_argument("--port", type=int, default=8766)
+    b.add_argument("--rotate-token", action="store_true", help="invalidate the old extension token")
+
     s = sub.add_parser("shim", help="(internal) proxy in front of one MCP server")
     s.add_argument("--server-name", required=True)
     s.add_argument("--client", default="unknown")
@@ -78,6 +82,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "gateway":
         return _gateway(args)
+
+    if args.cmd == "bridge":
+        return _bridge(args)
 
     if args.cmd == "status":
         from .ipc import ping
@@ -151,6 +158,27 @@ def _gateway(args: argparse.Namespace) -> int:
     # access_log=None: the access log would contain the secret path.
     # handler_cancellation: if Claude hangs up while a popup is open, the pending request is withdrawn.
     web.run_app(app, host=args.host, port=args.port, access_log=None, print=None, handler_cancellation=True)
+    return 0
+
+
+def _bridge(args: argparse.Namespace) -> int:
+    try:
+        from aiohttp import web
+    except ImportError:
+        print('The bridge needs aiohttp:  pip install -e ".[gateway]"', file=sys.stderr)
+        return 1
+    from .bridge import create_app, load_token
+
+    settings = Settings.load()
+    home = data_dir()
+    home.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(filename=str(home / "bridge.log"), level=getattr(logging, settings.log_level, logging.INFO),
+                        format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    token = load_token(home, rotate=args.rotate_token)
+    print(f"MCP Monitor bridge listening on 127.0.0.1:{args.port}", flush=True)
+    print(f"Port: {args.port}\nToken (paste into the extension options): {token}", flush=True)
+    web.run_app(create_app(settings, token), host="127.0.0.1", port=args.port, access_log=None, print=None,
+                handler_cancellation=True)
     return 0
 
 
