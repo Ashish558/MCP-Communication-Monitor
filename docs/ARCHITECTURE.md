@@ -34,12 +34,6 @@ flowchart LR
 * **Gateway**: a small web server that speaks MCP over HTTP. A tunnel (Cloudflare Quick Tunnel or ngrok) gives it a public HTTPS address, which the user adds as a custom connector in claude.ai.
 * **Daemon**: one background app that owns the popup, the queue of waiting requests, and the audit log. Shims and the gateway ask it for every decision.
 
-### A third door for connectors added directly in claude.ai (best effort)
-
-A connector added in claude.ai is called by Anthropic's cloud, so neither the shim nor the gateway sees it. One hook remains: claude.ai shows "Claude wants to use X from Y: Decline / Always allow / Allow once" in the browser, and the tool runs only after the browser sends that approval. A small **browser extension** holds the approving click, sends the tool name, connector and displayed parameters to a local **bridge** (`bridge.py`, which uses the same gatekeeper and popup), and then clicks "Allow once" or "Decline" for the user. "Always allow" is converted into "Allow once" so every call stays gated.
-
-This is deliberately labelled best effort: it only works when claude.ai shows its prompt, it reads the parameters as displayed (not the raw request), it depends on the prompt's layout, and it covers the browser only. It fails closed (any error means Decline). Details: [extension/README.md](../extension/README.md).
-
 ### Alternatives that were rejected
 
 | Idea | Why not |
@@ -141,7 +135,7 @@ The rule: **if the monitor cannot be sure the user said yes, the request is bloc
 
 ## 9. Known limitations
 
-* Claude Web is covered with a hard block only for connectors routed through the gateway. Connectors added directly in claude.ai are covered by the browser extension on a best-effort basis; the same connectors inside Claude Desktop or Claude Code (run by Anthropic's cloud) cannot be intercepted.
+* Claude Web is covered only for connectors routed through the gateway; a connector added directly in claude.ai bypasses the monitor.
 * The gateway does not support JSON-RPC batches (refused with an error) or server-initiated messages / GET streams.
 * Notifications have no reply, so they cannot be blocked.
 * Popups open on the primary monitor.
@@ -150,5 +144,5 @@ The rule: **if the monitor cannot be sure the user said yes, the request is bloc
 
 ## 10. Testing
 
-* 65 automated tests: protocol helpers, installer (backup, dry-run, undo, corrupt files), the shim end to end against a fake MCP server (allow, block, 20 concurrent calls, timeout, cancel, daemon down, daemon stopped mid-request, server crash, batches, large and unicode data, disable switch), and the gateway (tokens, origins, sessions, concurrency, hang-ups, HTTP upstream including streamed replies).
+* 58 automated tests: protocol helpers, installer (backup, dry-run, undo, corrupt files), the shim end to end against a fake MCP server (allow, block, 20 concurrent calls, timeout, cancel, daemon down, daemon stopped mid-request, server crash, batches, large and unicode data, disable switch), and the gateway (tokens, origins, sessions, concurrency, hang-ups, HTTP upstream including streamed replies).
 * Manual end-to-end checks: live Claude Code session, Claude Desktop, Claude Web through a Cloudflare tunnel, daemon autostart, real popup timeout.

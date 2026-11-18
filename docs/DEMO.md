@@ -24,7 +24,7 @@ Goal: show **a request being approved** and **a request being blocked**, in Clau
 | 6 | 2:45 | **Timeout (optional).** Leave a popup alone and show the countdown reaching zero. | "No answer means blocked. The monitor fails closed." |
 | 7 | 3:00 | **Claude Web.** In claude.ai, use the gateway connector. Show claude.ai's own prompt, then our popup. **Allow** once, **Block** once. | "Claude Web calls the server from Anthropic's cloud, so I route the connector through my gateway. Same popup, same control." |
 | 8 | 4:00 | Show `audit.jsonl` (open the log folder from the tray icon) with the decisions. | "Every request and decision is logged." |
-| 9 | 4:20 | Run `python -m pytest -q` (65 tests pass). | "The core logic is covered by automated tests." |
+| 9 | 4:20 | Run `python -m pytest -q` (58 tests pass). | "The core logic is covered by automated tests." |
 | 10 | 4:40 | Close: mention limits (Web needs the gateway) and the plan.md / ARCHITECTURE.md docs. | |
 
 Tip: in claude.ai choose **Allow once** each time (not "Always allow") so both prompts are visible.

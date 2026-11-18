@@ -28,20 +28,7 @@ Full explanation with diagrams: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 | Keep request pending; release on Allow; deny on Block | Held in the shim/gateway; Allow forwards the original message; Block returns an `isError` result |
 | Multiple simultaneous requests | One popup per request, independent decisions, queue beyond 3 visible (tested with 20-24 at once) |
 | Runs in background; handles termination, failures, errors | Daemon with tray icon, single instance, autostart by the shim; fail-closed; crash, timeout and cancel handling |
-| Modular, documented, install/run instructions | This README, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), docstrings, 65 tests |
-
-## Coverage: what is intercepted, and how
-
-| What Claude uses | Intercepted? | How |
-|---|---|---|
-| Local MCP server in Claude Desktop | Yes, fully (real block) | Shim wraps the server in Claude's config |
-| Local MCP server in Claude Code | Yes, fully | Same shim |
-| Remote MCP server you control, used from Claude Web | Yes, fully | Gateway + tunnel; add the gateway URL as the connector |
-| Connector added directly in claude.ai (Figma, Gmail, Slack...) | Yes, **best effort**, in the browser only | [Browser extension](extension/README.md) holds claude.ai's own "Allow once" click until you answer in our popup |
-| The same connectors inside Claude Desktop / Claude Code | **No** | Run by Anthropic's cloud; nothing on the PC can see or hold the call |
-| Desktop extensions (`.mcpb`) | Not tested | |
-
-Why the split: calls from Claude Web connectors are made by Anthropic's servers, so a program on your PC can only stand in the path where the MCP address is its own (gateway), or act on the approval click that happens in your browser (extension).
+| Modular, documented, install/run instructions | This README, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), docstrings, 58 tests |
 
 ## Install
 
@@ -60,7 +47,7 @@ python -m venv .venv
 
 ```bash
 .venv\Scripts\python scripts\popup_demo.py      # three simultaneous popups from a fake server
-.venv\Scripts\python -m pytest -q               # 65 tests
+.venv\Scripts\python -m pytest -q               # 58 tests
 ```
 
 ## Use it with Claude Desktop or Claude Code
@@ -108,16 +95,6 @@ claude.ai --HTTPS--> tunnel --> gateway (127.0.0.1:8765) --> real MCP server
 
 Gateway security: secret token in the path (`--rotate-token` invalidates it), bare 404 for wrong paths, browser `Origin` check, 10 MB body limit, no access log (it would contain the token), binds to 127.0.0.1 only, daemon never exposed. Even with a leaked URL every `tools/call` still needs your click.
 
-## Claude Web connectors you added directly (browser extension)
-
-For connectors that were added in claude.ai itself (not through the gateway):
-
-```bash
-.venv\Scripts\python -m mcp_monitor bridge      # prints a token; keep it running
-```
-
-Then load the `extension/` folder as an unpacked extension (Chrome, Edge or Brave) and paste the token in its options. Full steps, limits and security notes: [extension/README.md](extension/README.md). In short: it works only when claude.ai shows its own approval prompt (tools set to "Always allow" are invisible to it), and it is a best-effort layer, not a hard block like the shim and gateway.
-
 ## Configuration
 
 Optional file `%LOCALAPPDATA%\mcp-monitor\config.json`:
@@ -148,7 +125,7 @@ Logs in the same folder: `audit.jsonl` (every request and decision), `daemon.log
 
 ## Tests
 
-`python -m pytest -q` runs 65 tests, including end-to-end tests that start the real shim and gateway against a fake MCP server (allow, block, concurrency, timeout, cancel, daemon down, server crash, large and unicode data, security checks). Manually verified: live Claude Code session, Claude Desktop, Claude Web through a Cloudflare tunnel, daemon autostart, real popup timeout.
+`python -m pytest -q` runs 58 tests, including end-to-end tests that start the real shim and gateway against a fake MCP server (allow, block, concurrency, timeout, cancel, daemon down, server crash, large and unicode data, security checks). Manually verified: live Claude Code session, Claude Desktop, Claude Web through a Cloudflare tunnel, daemon autostart, real popup timeout.
 
 ## Project layout
 
@@ -158,12 +135,10 @@ src/mcp_monitor/
   gatekeeper.py shared "ask the daemon, apply fail mode" logic
   shim.py       stdio proxy (hold / forward / deny, crash handling)
   gateway/      HTTP gateway for Claude Web (app, stdio and HTTP upstreams)
-  bridge.py     local endpoint the browser extension asks for decisions
   ipc.py        proxy <-> daemon channel (127.0.0.1 + token)
   daemon/       broker (queue, timeouts, cancel), Tk popups, tray, audit log
   installer.py  backup-first config wrapping / unwrapping
   cli.py        python -m mcp_monitor <command>
-extension/      claude.ai browser extension (JavaScript)
 tests/          unit + end-to-end tests, fake MCP server
 scripts/        popup demo, screenshot helper
 docs/           ARCHITECTURE.md, DEMO.md, images
@@ -171,8 +146,7 @@ docs/           ARCHITECTURE.md, DEMO.md, images
 
 ## Known limits
 
-* Claude Web connectors added directly in claude.ai are covered only through the browser extension (best effort, needs claude.ai's own approval prompt). Connectors inside Claude Desktop/Code that Anthropic's cloud runs cannot be intercepted at all.
-* The browser extension is a small piece of JavaScript (a browser extension cannot be written in Python); everything else is Python.
+* Claude Web is covered only for connectors routed through the gateway; a connector added directly in claude.ai bypasses the monitor.
 * Gateway: JSON-RPC batches and server-initiated messages are not supported (refused with a clear error, never silently allowed).
 * Notifications have no reply and cannot be blocked.
 * Popups open on the primary monitor. Developed and tested on Windows.
