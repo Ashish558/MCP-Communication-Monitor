@@ -33,6 +33,7 @@ These cannot run in an automated test because they need the real Claude apps and
 | Claude Desktop, agent-mode session: allow, block, timeout | Works. The chat tab starts the same shim; a tool call from the chat tab itself was not observed. |
 | Claude Web through the gateway and a Cloudflare tunnel: allow and block | Works |
 | Figma connector in claude.ai through the browser extension (Edge): allow and block | Works |
+| Figma connector (claude.ai connector) used inside Claude Code, with the monitor running | The call works and returns data; the monitor sees nothing (no popup, no audit entry). Not checked in the Desktop chat tab. |
 | Shim starts the daemon by itself, including after Claude Desktop restarted | Works |
 | A real popup left unanswered | Blocked after the timeout |
 | Popup on high-DPI screen (buttons not clipped) | Fixed and checked |

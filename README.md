@@ -40,7 +40,7 @@ To use it with Claude, follow **[docs/setup.md](docs/setup.md)**.
 | Local MCP server in Claude Code | Yes, a real block | Same shim |
 | Your own remote MCP server, used from Claude Web | Yes, a real block | Gateway and a tunnel; the tunnel address is the connector |
 | Connector added directly in claude.ai (Figma, Gmail, Slack...) | Yes, **best effort**, in the browser only | A [browser extension](extension/README.md) holds claude.ai's own "Allow once" click until you answer in our popup (verified with Figma in Edge) |
-| The same connectors inside Claude Desktop / Claude Code | **No.** They still work normally, they just get no popup | Run through Anthropic's servers; our shim and gateway are not in their path |
+| The same connectors inside Claude Desktop / Claude Code | **No.** They still work normally, they just get no popup (checked with Figma in Claude Code) | Run through Anthropic's servers; our shim and gateway are not in their path |
 
 Claude Web calls tools from Anthropic's cloud, not from your PC, so a program on your PC can only stand in the path where the tool's address is its own (the gateway), or act on the approval click that happens in your browser (the extension). Details and the full list of limits: [docs/edge-cases.md](docs/edge-cases.md).
 

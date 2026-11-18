@@ -97,7 +97,7 @@ How to read the Evidence column: a test name means an automated test proves it (
 
 | Gap | Why it exists / what to do |
 |---|---|
-| Claude.ai connectors (Figma, Gmail...) used inside Claude Desktop or Claude Code are not monitored | They keep working normally, but they are called through Anthropic's servers, so our shim and gateway are not in the path and no popup appears. Interception there was not attempted |
+| Claude.ai connectors (Figma, Gmail...) used inside Claude Desktop or Claude Code are not monitored | They keep working normally, but they are called through Anthropic's servers, so our shim and gateway are not in the path and no popup appears. Checked in Claude Code: a Figma call worked and left no trace in the audit log. The Desktop chat tab was not checked, and interception there was not attempted |
 | Website connectors depend on claude.ai's own prompt | Best effort. It breaks if a tool is on "Always allow" or the prompt layout changes (it then fails safe) |
 | Server-initiated requests (for example sampling) and notifications are not gated | They are not tool calls from Claude; documented |
 | `resources/read` and `prompts/get` are not intercepted by default | Add them to `intercept_methods` |
