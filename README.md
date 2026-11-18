@@ -37,7 +37,7 @@ Full explanation with diagrams: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 | Local MCP server in Claude Desktop | Yes, fully (real block) | Shim wraps the server in Claude's config |
 | Local MCP server in Claude Code | Yes, fully | Same shim |
 | Remote MCP server you control, used from Claude Web | Yes, fully | Gateway + tunnel; add the gateway URL as the connector |
-| Connector added directly in claude.ai (Figma, Gmail, Slack...) | Yes, **best effort**, in the browser only | [Browser extension](extension/README.md) holds claude.ai's own "Allow once" click until you answer in our popup |
+| Connector added directly in claude.ai (Figma, Gmail, Slack...) | Yes, **best effort**, in the browser only (verified with the Figma connector in Edge) | [Browser extension](extension/README.md) holds claude.ai's own "Allow once" click until you answer in our popup |
 | The same connectors inside Claude Desktop / Claude Code | **No** | Run by Anthropic's cloud; nothing on the PC can see or hold the call |
 | Desktop extensions (`.mcpb`) | Not tested | |
 

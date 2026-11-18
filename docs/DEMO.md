@@ -23,6 +23,7 @@ Goal: show **a request being approved** and **a request being blocked**, in Clau
 | 5 | 2:15 | **Concurrent requests.** Ask Claude to call the tool several times in one message (or ask for two tools at once). Show the stack of popups, answer one Allow and one Block. | "Several requests at once each get their own popup. They are decided independently." |
 | 6 | 2:45 | **Timeout (optional).** Leave a popup alone and show the countdown reaching zero. | "No answer means blocked. The monitor fails closed." |
 | 7 | 3:00 | **Claude Web.** In claude.ai, use the gateway connector. Show claude.ai's own prompt, then our popup. **Allow** once, **Block** once. | "Claude Web calls the server from Anthropic's cloud, so I route the connector through my gateway. Same popup, same control." |
+| 7b | 3:45 | **Claude Web, Figma (browser extension).** Set the Figma tools to "Needs approval" first. Ask Claude about a Figma file, click **Allow once** in claude.ai, then show our popup. Click **Allow** once and **Block** once. | "Connectors added directly in claude.ai run in Anthropic cloud, so I hold the approval click in the browser with a small extension and ask through the same popup." |
 | 8 | 4:00 | Show `audit.jsonl` (open the log folder from the tray icon) with the decisions. | "Every request and decision is logged." |
 | 9 | 4:20 | Run `python -m pytest -q` (65 tests pass). | "The core logic is covered by automated tests." |
 | 10 | 4:40 | Close: mention limits (Web needs the gateway) and the plan.md / ARCHITECTURE.md docs. | |
