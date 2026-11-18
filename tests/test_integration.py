@@ -27,7 +27,7 @@ def test_blocked_call_never_reaches_server(daemon, shim):
     rid = s.call("echo", {"text": "block-me"})
     reply = s.recv_for([rid])[rid]
     assert reply["result"]["isError"] is True
-    assert "Blocked by the user" in result_text(reply)
+    assert "Blocked by MCP Monitor" in result_text(reply)
     # the server must not have run echo: count is still 0
     cid = s.call("count", {"x": "allow-me"})
     assert result_text(s.recv_for([cid])[cid]) == "0"

@@ -137,7 +137,7 @@ def test_blocked_call_never_reaches_server(gw):
     c = Conn(url)
     c.initialize()
     _, _, body = c.call("echo", {"text": "block-me"})
-    assert body["result"]["isError"] is True and "Blocked by the user" in text_of(body)
+    assert body["result"]["isError"] is True and "Blocked by MCP Monitor" in text_of(body)
     assert text_of(c.call("count", {"x": "allow-me"})[2]) == "0"
 
 

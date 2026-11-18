@@ -75,12 +75,6 @@ class _Card:
         win.protocol("WM_DELETE_WINDOW", lambda: self._decide("block", "The popup was closed."))
         win.bind("<Escape>", lambda _e: self._decide("block", "Blocked with Esc."))
 
-        width, height = 600, 470
-        x = max(0, (win.winfo_screenwidth() - width) // 2 + 30 * index)
-        y = max(0, (win.winfo_screenheight() - height) // 2 + 30 * index)
-        win.geometry(f"{width}x{height}+{x}+{y}")
-        win.minsize(480, 380)
-
         tk.Label(win, text="An MCP request is waiting for your decision", bg="#d68910", fg="white",
                  font=("Segoe UI", 12, "bold"), anchor="w", padx=14, pady=8).pack(fill="x")
 
@@ -124,6 +118,16 @@ class _Card:
                                    state="disabled", **common)
         self.block_btn.pack(side="left")
         self.allow_btn.pack(side="right")
+
+        # Size from the content (not a fixed pixel size) so the buttons are never clipped on
+        # high-DPI screens where fonts render larger.
+        win.update_idletasks()
+        width = max(600, win.winfo_reqwidth())
+        height = max(470, win.winfo_reqheight())
+        x = max(0, (win.winfo_screenwidth() - width) // 2 + 30 * index)
+        y = max(0, (win.winfo_screenheight() - height) // 2 + 30 * index)
+        win.geometry(f"{width}x{height}+{x}+{y}")
+        win.minsize(width, height)
         win.after(ui.settings.button_delay_ms, self._enable)
         win.after(40, lambda: (win.lift(), win.focus_force(), bring_to_front(win)))
 

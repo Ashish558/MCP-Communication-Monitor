@@ -107,7 +107,7 @@ def denial_response(msg: dict, reason: str) -> dict:
     model reads the explanation and can tell the user. Other methods get a
     JSON-RPC error.
     """
-    text = f"Blocked by the user via MCP Monitor. {reason}".strip()
+    text = f"Blocked by MCP Monitor. {reason}".strip()
     if msg.get("method") == "tools/call":
         return {
             "jsonrpc": "2.0",
