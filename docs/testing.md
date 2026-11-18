@@ -9,6 +9,8 @@
 
 The tests use a temporary data folder and a rule-driven stand-in for the popup, so they never touch your real logs, config or Claude apps. A passing "block" test means the request really was blocked.
 
+Captured results of the latest run: [test-results.md](test-results.md).
+
 ## What the automated tests cover
 
 | File | Tests | What it checks |

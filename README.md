@@ -65,6 +65,7 @@ Full explanation with diagrams: [docs/architecture.md](docs/architecture.md).
 | [docs/security.md](docs/security.md) | Security controls, trust boundaries and limits |
 | [docs/edge-cases.md](docs/edge-cases.md) | Every edge case, what happens, and the test or check that proves it |
 | [docs/testing.md](docs/testing.md) | How to run the tests, what they cover, what was verified by hand |
+| [docs/test-results.md](docs/test-results.md) | Captured results of the 73 tests, and real-use counts from the audit log |
 | [extension/README.md](extension/README.md) | The claude.ai browser extension |
 
 ## Project layout
