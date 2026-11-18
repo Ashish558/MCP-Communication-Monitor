@@ -33,7 +33,7 @@ Declining (button or Esc) is never delayed.
 
 ## Security
 
-* The extension is the only thing allowed to call the bridge: it requires a `chrome-extension://` origin and a secret token, binds to 127.0.0.1, and rejects normal web pages.
+* Only the extension can call the bridge: it needs the secret token, binds to 127.0.0.1, and refuses normal web pages (http/https origins). Chrome/Brave send a `chrome-extension://` origin and Edge an `extension://` one.
 * The page script never talks to localhost (claude.ai's security policy would block it); only the extension's background worker does.
 * The extension only runs on `claude.ai` and `claude.com`.
 

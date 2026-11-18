@@ -9,8 +9,8 @@ here, and clicks Allow once or Decline according to the user's answer in *our* p
 Endpoint (127.0.0.1 only):
   POST /decide   {"server":..., "tool":..., "details":..., "client":...}  ->  {"decision":"allow|block","reason":...}
   GET  /health   -> {"ok": true}
-Security: bearer token (``bridge.json``), requests must come from a ``chrome-extension://``
-origin (web pages are refused), size limits, fail closed.
+Security: bearer token (``bridge.json``), web-page origins (http/https) are refused, only
+browser-extension origins are accepted, size limits, fail closed.
 """
 
 from __future__ import annotations
@@ -31,6 +31,7 @@ from .ipc import DaemonClient, new_ref
 
 log = logging.getLogger("mcp_monitor.bridge")
 
+EXTENSION_ORIGINS = ("chrome-extension://", "extension://")
 MAX_BODY = 256 * 1024
 MAX_FIELD = 100_000
 DEFAULT_PORT = 8766
@@ -73,8 +74,12 @@ class Bridge:
         self._pool.shutdown(wait=False, cancel_futures=True)
 
     def _guard(self, request: web.Request) -> None:
+        # Refuse ordinary web pages (their Origin is http(s)://...). Chrome and Brave send
+        # chrome-extension://<id>, Edge sends extension://<id>; some requests carry no Origin at
+        # all. The secret token below is what actually authenticates the caller.
         origin = request.headers.get("Origin", "")
-        if not origin.startswith("chrome-extension://"):        # refuses ordinary web pages
+        if origin and not origin.startswith(EXTENSION_ORIGINS):
+            log.warning("rejected request with Origin %r", origin)
             raise web.HTTPForbidden(text="forbidden")
         supplied = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
         if not hmac.compare_digest(supplied.encode(), self.token.encode()):

@@ -64,7 +64,18 @@ def test_unanswered_request_times_out_to_block(bridge):
 
 def test_requests_from_web_pages_are_refused(bridge):
     assert post(bridge, {"tool": "t"}, origin="https://evil.example")[0] == 403
-    assert post(bridge, {"tool": "t"}, origin=None)[0] == 403
+    assert post(bridge, {"tool": "t"}, origin="http://localhost:3000")[0] == 403
+    assert post(bridge, {"tool": "t"}, origin="null")[0] == 403
+
+
+def test_edge_and_chrome_extension_origins_are_accepted(bridge):
+    for origin in ("chrome-extension://abc", "extension://hnakflckeencifckhhnpechhfcanfeec"):
+        assert post(bridge, None, origin=origin, path="/health", method="GET")[0] == 200
+
+
+def test_request_without_origin_still_needs_the_token(bridge):
+    assert post(bridge, None, origin=None, token=None, path="/health", method="GET")[0] == 401
+    assert post(bridge, None, origin=None, path="/health", method="GET")[0] == 200
 
 
 def test_missing_or_wrong_token_is_refused(bridge):
