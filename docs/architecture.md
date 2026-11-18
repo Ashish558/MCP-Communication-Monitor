@@ -2,6 +2,17 @@
 
 This document explains how MCP Monitor intercepts MCP traffic, why it was built this way, and how it behaves when things go wrong.
 
+## In 60 seconds
+
+* **Problem.** When Claude uses a tool it sends a request to an MCP server, and nothing asks the user first.
+* **Idea.** Put a small program in the path of every request. It **holds** each tool call, asks a background app (the daemon), which shows a popup. **Allow** forwards the original request; **Block** answers Claude itself and the real server never sees it.
+* **Three doors, one decision engine.**
+  * *Shim*: local servers in Claude Desktop and Claude Code (the config makes Claude start the shim instead of the server).
+  * *Gateway*: servers that Claude Web reaches over HTTPS (the tunnel address is the gateway's).
+  * *Browser extension + bridge*: connectors added directly in claude.ai, best effort (it holds claude.ai's own "Allow once" click).
+* **Safe by default.** If the monitor is unsure (daemon down, no answer, error) the request is blocked.
+* **More detail.** [Setup](setup.md), [configuration](configuration.md), [security](security.md), [edge cases](edge-cases.md), [testing](testing.md).
+
 ## 1. The problem
 
 When Claude uses a tool (read a file, search, send a message) it sends a small JSON request to an **MCP server**. By default nothing asks the user before the request runs. The goal is to hold **each individual request**, show it to the user, and run it only after the user clicks **Allow**. If the user clicks **Block**, the request must not run and Claude must get a clear refusal.
@@ -124,12 +135,7 @@ The rule: **if the monitor cannot be sure the user said yes, the request is bloc
 
 ## 7. Security
 
-* **Local channel**: the daemon listens on 127.0.0.1 only, and every connection must present a random token stored in a per-user file.
-* **Gateway**: secret token in the URL path (wrong paths give a bare 404); browser `Origin` checks reject anything but claude.ai / claude.com; 10 MB body limit; in-flight cap; access log disabled because it would contain the token; the daemon port is never exposed through the tunnel. Even if the URL leaks, each `tools/call` still needs a click.
-* **Popup honesty**: parameters are shown as plain text; control and invisible/bidirectional characters are escaped so a tool cannot spoof the dialog. Secrets (keys named `password`, `token`, `api_key`…, and values shaped like bearer tokens, `sk-…`, GitHub tokens, AWS keys) are masked in the popup and the audit log.
-* **No shell**: server commands are launched as argument lists, never through a shell string.
-* **Safe config changes**: backup before every change (the first backup is never overwritten), dry-run, atomic write, validation of the result.
-* **Audit log**: every request and decision is written to `audit.jsonl` with rotation.
+The full security model (controls, trust boundaries, limits) is in [security.md](security.md). The short version: everything local is token-protected and bound to 127.0.0.1, the popup shows masked plain text with look-alike characters escaped, buttons ignore input for 0.6 s after appearing, and config changes are backed up and reversible.
 
 ## 8. Design decisions and trade-offs
 
@@ -141,14 +147,12 @@ The rule: **if the monitor cannot be sure the user said yes, the request is bloc
 
 ## 9. Known limitations
 
-* Claude Web is covered with a hard block only for connectors routed through the gateway. Connectors added directly in claude.ai are covered by the browser extension on a best-effort basis; the same connectors inside Claude Desktop or Claude Code (run by Anthropic's cloud) cannot be intercepted.
-* The gateway does not support JSON-RPC batches (refused with an error) or server-initiated messages / GET streams.
-* Notifications have no reply, so they cannot be blocked.
-* Popups open on the primary monitor.
-* A user with administrator rights can bypass the monitor by editing the config back (`doctor` reports unmonitored servers).
-* Quick Tunnel addresses change on every restart.
+* Connectors that Anthropic runs inside Claude Desktop or Claude Code cannot be intercepted by any program on the PC.
+* Connectors added in claude.ai are covered only by the best-effort browser extension.
+* The gateway refuses JSON-RPC batches and does not support server-initiated streams.
+
+The complete list, with reasons, is in [edge-cases.md](edge-cases.md#8-known-gaps-and-limits-honest-list).
 
 ## 10. Testing
 
-* 69 automated tests: protocol helpers, installer (backup, dry-run, undo, corrupt files), the shim end to end against a fake MCP server (allow, block, 20 concurrent calls, timeout, cancel, daemon down, daemon stopped mid-request, server crash, batches, large and unicode data, disable switch), the gateway (tokens, origins, sessions, concurrency, hang-ups, HTTP upstream including streamed replies), and the browser bridge (token, origin checks, fail closed). The extension's click-holding logic was exercised on a mock of claude.ai's approval prompt.
-* Manual end-to-end checks: live Claude Code session, Claude Desktop, Claude Web through a Cloudflare tunnel, the Figma connector in claude.ai through the browser extension (Edge), daemon autostart, real popup timeout.
+73 automated tests plus manual checks on the real Claude apps. See [testing.md](testing.md).

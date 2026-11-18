@@ -164,7 +164,9 @@ class Broker:
             future=asyncio.get_running_loop().create_future(), conn=conn,
         )
         base = {"id": req.id, "client": req.client, "server": req.server,
-                "method": req.method, "tool": req.tool, "arguments": req.arguments_preview}
+                "method": req.method, "tool": req.tool}
+        if self.settings.log_arguments:      # parameters can hold personal data; this can be turned off
+            base["arguments"] = req.arguments_preview
 
         if self._closing or len(self.pending) >= self.settings.max_pending:
             await conn.send({"type": "decision", "ref": ref, "decision": "block",

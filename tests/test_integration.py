@@ -177,6 +177,17 @@ def test_string_and_number_ids_are_preserved_in_denials(daemon, shim):
     assert reply["id"] == "abc-1" and reply["result"]["isError"] is True
 
 
+def test_garbage_lines_do_not_break_the_shim(daemon, shim):
+    s = shim()
+    s.initialize()
+    s.proc.stdin.write(b"this is not json\n\n{broken\n")
+    s.proc.stdin.flush()
+    s.send({"jsonrpc": "2.0", "id": 8, "method": "ping"})
+    assert s.recv_for([8])[8]["result"] == {}                    # still alive and relaying
+    rid = s.call("echo", {"text": "allow-me after garbage"})
+    assert result_text(s.recv_for([rid])[rid]) == "echo:allow-me after garbage"
+
+
 def test_missing_server_command_exits_cleanly(home, shim):
     s = shim(server_cmd=[sys.executable, "-c", "import sys; sys.exit(0)"])
     assert s.close() == 0

@@ -36,7 +36,7 @@ def data_dir() -> Path:
 def project_backup_dir() -> Path:
     """``<repo>/backups/config`` when running from a source checkout, else ``<home>/backups``."""
     repo_root = Path(__file__).resolve().parents[2]
-    if (repo_root / "backups").is_dir():
+    if (repo_root / "pyproject.toml").is_file():          # running from a source checkout
         return repo_root / "backups" / "config"
     return data_dir() / "backups"
 
@@ -50,6 +50,7 @@ class Settings:
     max_visible_popups: int = 3        # popups shown at once; the rest wait in a queue
     autostart_daemon: bool = True      # shim starts the daemon if it is not running
     preview_max_chars: int = 4000      # parameter text shown in the popup / audit log
+    log_arguments: bool = True         # False: the audit log records decisions but not parameters
     button_delay_ms: int = 600         # buttons are inert this long after a popup appears
     log_level: str = "INFO"
     disabled: bool = False             # pass-through mode (emergency off switch)
