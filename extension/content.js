@@ -63,14 +63,23 @@
     const server = (m && m[2]) || (m2 && m2[2]) || "unknown connector";
     // The parameter rows come first; claude.ai then repeats the tool title and adds a long tool
     // description ("Show more", "Takes N inputs", "Raw schema"). Keep only the parameter rows.
-    const body = lines.slice(headerIdx + 1);
+    // The header may span several lines ("Claude wants to use" / tool chip / "from" / server chip),
+    // so skip to the line that holds the server name before looking for the end of the parameters.
+    let headerEnd = Math.max(0, headerIdx);
+    for (let i = headerEnd; i < Math.min(lines.length, headerEnd + 6); i++) {
+      if (lines[i].toLowerCase().includes(server.trim().toLowerCase())) {
+        headerEnd = i;
+        break;
+      }
+    }
+    const body = lines.slice(headerEnd + 1);
     const stop = body.findIndex(
       (l) => l.toLowerCase() === tool.trim().toLowerCase() || /^show more$/i.test(l) || /^takes \d+ input/i.test(l)
     );
-    const details = (stop >= 0 ? body.slice(0, stop) : body)
-      .filter((l) => !LABEL.decline.test(l) && !LABEL.once.test(l) && !LABEL.always.test(l))
-      .filter((l) => !l.split(/\s+/).every((w) => KEYCAP.test(w)))
-      .join("\n");
+    const notButton = (l) =>
+      !LABEL.decline.test(l) && !LABEL.once.test(l) && !LABEL.always.test(l) && !l.split(/\s+/).every((w) => KEYCAP.test(w));
+    let details = (stop >= 0 ? body.slice(0, stop) : body).filter(notButton).join("\n");
+    if (!details) details = body.filter(notButton).slice(0, 15).join("\n"); // never show an empty box
     return { tool: tool.trim(), server: server.trim(), details };
   }
 

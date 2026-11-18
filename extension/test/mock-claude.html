@@ -15,7 +15,8 @@
 </style>
 <!-- Same shape as the real claude.ai prompt: NO whitespace between a button label and its shortcut keys. -->
 <div class="prompt" id="prompt">
-  <div>Claude wants to use <span class="chip">Create Session</span> from <span class="chip">Figma</span></div>
+  <!-- flex items: innerText puts each on its own line, like the real prompt's chips -->
+  <div style="display:flex;gap:6px;align-items:center"><span>Claude wants to use</span><span class="chip">Create Session</span><span>from</span><span class="chip">Figma</span></div>
   <div class="params">
     <div class="row"><span>Description</span><span>Describe the contents of this Figma file (read-only)</span></div>
     <div class="row"><span>File key</span><span>LpQv6kb7I7uXudGrRuL8N5</span></div>
