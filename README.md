@@ -6,7 +6,7 @@ Works with **Claude Desktop**, **Claude Code** and **Claude Web (claude.ai)**.
 
 ![Approval popup](docs/images/popup.png)
 
-**Demo video:** _link added on submission_
+**Demo video:** [Watch on Google Drive](https://drive.google.com/file/d/1KmlYrS3Nwg7mV554VrMm7YOxtjWH9twB/view?usp=sharing)
 
 ## What it does
 
