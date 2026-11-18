@@ -13,6 +13,7 @@ Works with **Claude Desktop**, **Claude Code** and **Claude Web (claude.ai)**.
 * An MCP tool call is a small JSON message from Claude to an "MCP server" (a helper program).
 * **Claude Desktop / Claude Code**: Claude starts each local server as a child process. The installer changes the config so Claude starts a small **shim** instead. The shim starts the real server and relays messages. It **holds** every `tools/call`, asks the **daemon** (the background app) for a decision, then forwards the original message (Allow) or answers Claude itself (Block). The real server never sees a blocked call.
 * **Claude Web**: Anthropic's cloud calls MCP servers, not your PC, so nothing local can see those calls. The only way in is to make the MCP address ours. A **gateway** (small web server) plus a tunnel gives claude.ai an address that asks you first and then forwards to the real server.
+* **Tools added directly in the Claude website** (Figma, Gmail, Slack...): Anthropic's servers call these, and no local program or gateway is in their path. The one thing that happens on your PC is the website's own "Allow once" prompt in your browser. A small **browser extension** holds that click and asks the daemon first, so the same popup appears. This is why the setup below has a fourth step.
 * If anything fails (daemon down, no answer, crash) the call is **blocked**, never silently allowed.
 
 Full explanation with diagrams: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**. Original build plan: [plan.md](plan.md).
@@ -43,6 +44,17 @@ Full explanation with diagrams: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
 Why the split: calls from Claude Web connectors are made by Anthropic's servers, so a program on your PC can only stand in the path where the MCP address is its own (gateway), or act on the approval click that happens in your browser (extension).
 
+## Setup at a glance (and why each part exists)
+
+Set up only the parts for the kinds of tools you use. Details for each step are below.
+
+| Step | What you set up | Why it is needed |
+|---|---|---|
+| 1 | **Install** the app and start the **daemon** | The daemon is the background app that shows the popup and keeps the log. Every other part asks it for a decision. |
+| 2 | **Local tools** in Claude Desktop / Claude Code: wrap them with the installer | Claude starts these tools itself, so a small program (the shim) can sit in the middle and hold each request. |
+| 3 | **Your own tools for Claude Web**: run the gateway and a tunnel, add the tunnel address as a connector | Claude Web calls tools from Anthropic's cloud, so the tool's address has to be ours for us to see the request. |
+| 4 | **Tools added in the Claude website** (Figma, Gmail, Slack...): run the bridge and load the browser extension | Anthropic's servers call these tools directly, so neither the shim nor the gateway can see them. The only thing that happens on your PC is the website's own "Allow once" prompt. The extension holds that click and asks the daemon first. **Without step 4, these tools run with no popup.** |
+
 ## Install
 
 Requires Python 3.10+ (developed on Windows 11 with Python 3.13).
@@ -63,7 +75,7 @@ python -m venv .venv
 .venv\Scripts\python -m pytest -q               # 69 tests
 ```
 
-## Use it with Claude Desktop or Claude Code
+## Step 2: Local tools in Claude Desktop or Claude Code
 
 1. **Start the daemon** (the shim also starts it automatically on first use):
 
@@ -78,7 +90,8 @@ python -m venv .venv
    .venv\Scripts\python -m mcp_monitor install --target path\to\project\.mcp.json --server myserver --dry-run
    .venv\Scripts\python -m mcp_monitor install --target path\to\project\.mcp.json --server myserver
 
-   # Claude Desktop (edits %APPDATA%\Claude\claude_desktop_config.json, affects every Desktop chat)
+   # Claude Desktop (affects every Desktop chat; the installer finds the config file, including the
+   # Microsoft Store build's location. If the file does not exist yet, create it first.)
    .venv\Scripts\python -m mcp_monitor install --target desktop --server filesystem
    ```
 
@@ -86,7 +99,7 @@ python -m venv .venv
 
 3. Use Claude normally. Each tool call opens the popup. Other commands: `list`, `doctor`, `status`, `uninstall`, `restore` (all accept `--target`).
 
-## Use it with Claude Web (claude.ai)
+## Step 3: Your own tools for Claude Web (claude.ai)
 
 ```
 claude.ai --HTTPS--> tunnel --> gateway (127.0.0.1:8765) --> real MCP server
@@ -108,9 +121,11 @@ claude.ai --HTTPS--> tunnel --> gateway (127.0.0.1:8765) --> real MCP server
 
 Gateway security: secret token in the path (`--rotate-token` invalidates it), bare 404 for wrong paths, browser `Origin` check, 10 MB body limit, no access log (it would contain the token), binds to 127.0.0.1 only, daemon never exposed. Even with a leaked URL every `tools/call` still needs your click.
 
-## Claude Web connectors you added directly (browser extension)
+## Step 4: Claude Web connectors you added directly (browser extension)
 
-For connectors that were added in claude.ai itself (not through the gateway):
+**Why this step exists:** a connector added in claude.ai itself (Figma, Gmail, Slack...) is called by Anthropic's servers, not through the gateway, so steps 2 and 3 cannot see it. The extension is the only part that covers these tools. It is not Figma-specific: it works for any tool added in the website.
+
+Setup (the extension code is in the [`extension/`](extension/) folder of this repo):
 
 ```bash
 .venv\Scripts\python -m mcp_monitor bridge      # prints a token; keep it running
