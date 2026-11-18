@@ -43,6 +43,23 @@ class Gatekeeper:
             "arguments_preview": text,
             "arguments_size": size,
         }
+        return self._decide(ref, info)
+
+    def ask_fields(self, ref: str, client: str, server: str, method: str, tool: str, details: str) -> Decision:
+        """Like :meth:`ask`, for sources that only have display text (the browser extension reads
+        the tool name and parameters from claude.ai's own approval prompt)."""
+        text, size = protocol.preview_text(details, self.settings.preview_max_chars)
+        info = {
+            "client": protocol.sanitize_text(client),
+            "server": protocol.sanitize_text(server),
+            "method": protocol.sanitize_text(method),
+            "tool": protocol.sanitize_text(tool),
+            "arguments_preview": text,
+            "arguments_size": size,
+        }
+        return self._decide(ref, info)
+
+    def _decide(self, ref: str, info: dict) -> Decision:
         try:
             return self.client.decide(ref, info, timeout=self.settings.decision_timeout + 5)
         except DaemonUnavailable as exc:
