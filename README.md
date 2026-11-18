@@ -40,7 +40,7 @@ To use it with Claude, follow **[docs/setup.md](docs/setup.md)**.
 | Local MCP server in Claude Code | Yes, a real block | Same shim |
 | Your own remote MCP server, used from Claude Web | Yes, a real block | Gateway and a tunnel; the tunnel address is the connector |
 | Connector added directly in claude.ai (Figma, Gmail, Slack...) | Yes, **best effort**, in the browser only | A [browser extension](extension/README.md) holds claude.ai's own "Allow once" click until you answer in our popup (verified with Figma in Edge) |
-| The same connectors inside Claude Desktop / Claude Code | **No.** They still work normally, they just get no popup (checked with Figma in Claude Code) | Run through Anthropic's servers; our shim and gateway are not in their path |
+| The same connectors inside Claude Desktop / Claude Code | **No** | Run through Anthropic's servers; our shim and gateway are not in their path |
 
 Claude Web calls tools from Anthropic's cloud, not from your PC, so a program on your PC can only stand in the path where the tool's address is its own (the gateway), or act on the approval click that happens in your browser (the extension). Details and the full list of limits: [docs/edge-cases.md](docs/edge-cases.md).
 
@@ -88,7 +88,7 @@ docs/            documentation
 
 ## Known limits
 
-* Claude.ai connectors (Figma, Gmail...) used inside Claude Desktop or Claude Code still work normally but are not monitored: they go through Anthropic's servers, not through our shim or gateway. Interception there was not attempted.
+* Claude.ai connectors (Figma, Gmail...) used inside Claude Desktop or Claude Code work normally but are not monitored: they go through Anthropic's servers, not through our shim or gateway. Interception there was not attempted.
 * The browser extension works only when claude.ai shows its own approval prompt; it is best effort.
 * Developed and tested on Windows; popups open on the primary monitor; the daemon does not start at login.
 * The browser extension is JavaScript, because browser extensions cannot be written in Python. Everything else is Python.
