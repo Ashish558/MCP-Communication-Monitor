@@ -51,7 +51,7 @@
   function describe(prompt) {
     const lines = (prompt.root.innerText || "")
       .split("\n")
-      .map((l) => l.trim())
+      .map((l) => l.replace(/[-]/g, "").trim()) // icon-font glyphs render as stray boxes
       .filter(Boolean);
     const headerIdx = lines.findIndex((l) => /wants to use/i.test(l));
     const header = headerIdx >= 0 ? lines[headerIdx] : lines[0] || "";

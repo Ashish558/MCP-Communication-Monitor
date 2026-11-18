@@ -1,6 +1,6 @@
 # MCP Communication Monitor — Implementation Plan
 
-Status: **IMPLEMENTED.** This is the original plan the build followed (kept for reference). For how the finished app works see [README.md](README.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Where the build differs: the tray icon is optional, the gateway uses `aiohttp`, and the config backups live in `backups/config/`.
+Status: **IMPLEMENTED.** This is the original plan the build followed (kept for reference). For how the finished app works see [README.md](README.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Where the build differs: the tray icon is optional, the gateway uses `aiohttp`, the config backups live in `backups/config/`, and a best-effort browser extension + local bridge was added later for connectors added directly in claude.ai.
 Deadline: Friday, 20 November 2026, EOD IST (submit CV + GitHub repo link + demo video link).
 
 ---

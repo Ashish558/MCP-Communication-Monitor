@@ -63,3 +63,7 @@ def test_client_name_from_initialize():
     msg = {"params": {"clientInfo": {"name": "claude-ai", "version": "0.1"}}}
     assert p.client_name_from_initialize(msg) == "claude-ai 0.1"
     assert p.client_name_from_initialize({}) is None
+
+
+def test_sanitize_escapes_private_use_icon_glyphs():
+    assert "\ue123" not in p.sanitize_text("icon \ue123 text")

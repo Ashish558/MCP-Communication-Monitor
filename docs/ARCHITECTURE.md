@@ -150,5 +150,5 @@ The rule: **if the monitor cannot be sure the user said yes, the request is bloc
 
 ## 10. Testing
 
-* 65 automated tests: protocol helpers, installer (backup, dry-run, undo, corrupt files), the shim end to end against a fake MCP server (allow, block, 20 concurrent calls, timeout, cancel, daemon down, daemon stopped mid-request, server crash, batches, large and unicode data, disable switch), and the gateway (tokens, origins, sessions, concurrency, hang-ups, HTTP upstream including streamed replies).
+* 68 automated tests: protocol helpers, installer (backup, dry-run, undo, corrupt files), the shim end to end against a fake MCP server (allow, block, 20 concurrent calls, timeout, cancel, daemon down, daemon stopped mid-request, server crash, batches, large and unicode data, disable switch), and the gateway (tokens, origins, sessions, concurrency, hang-ups, HTTP upstream including streamed replies).
 * Manual end-to-end checks: live Claude Code session, Claude Desktop, Claude Web through a Cloudflare tunnel, daemon autostart, real popup timeout.

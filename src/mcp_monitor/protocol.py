@@ -158,7 +158,7 @@ def sanitize_text(text: str) -> str:
     for ch in text:
         if ch in "\n\t":
             out.append(ch)
-        elif unicodedata.category(ch) in ("Cc", "Cf", "Zl", "Zp"):
+        elif unicodedata.category(ch) in ("Cc", "Cf", "Zl", "Zp", "Co"):
             out.append(f"\\u{ord(ch):04x}" if ord(ch) <= 0xFFFF else f"\\U{ord(ch):08x}")
         else:
             out.append(ch)
