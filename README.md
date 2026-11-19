@@ -95,6 +95,7 @@ docs/            documentation
 * Claude.ai connectors (Figma, Gmail...) in the Claude Desktop chat tab work normally but are not monitored: no shim, gateway or hook is in their path, and interception there was not attempted. In Claude Code they are covered by the hook.
 * The browser extension works only when claude.ai shows its own approval prompt; it is best effort.
 * Developed and tested on Windows; popups open on the primary monitor; the daemon does not start at login.
+* In the Claude Desktop version tested (5.11492) every session ran in the app's agent mode; the separate chat engine connected to the shim but made no tool call, so only agent-mode calls were observed.
 * The browser extension is JavaScript, because browser extensions cannot be written in Python. Everything else is Python.
 
 ## License

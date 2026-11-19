@@ -115,6 +115,7 @@ How to read the Evidence column: a test name means an automated test proves it (
 
 | Gap | Why it exists / what to do |
 |---|---|
+| Claude Desktop's separate chat engine (`claude-ai` client) was never seen making a tool call | It connects to the same shim at startup, but every session available in the version tested (5.11492) ran in agent mode, so only agent-mode calls were observed |
 | Claude.ai connectors (Figma, Gmail...) in the Claude Desktop chat tab are not monitored | No shim, gateway or hook is in their path. They keep working normally. Interception there was not attempted |
 | The Claude Code hook was verified in a terminal session (2.1.302) and in Claude Desktop's Code tab, not in IDE extensions | Anthropic's docs say hooks also fire in IDE extensions; I did not verify that |
 | The hook relies on a Claude Code feature | If Claude Code ignored a hook's block for some MCP tool (user reports of this existed for older versions), the call would run. It was verified to block on the tested version |

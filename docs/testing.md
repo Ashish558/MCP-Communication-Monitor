@@ -33,7 +33,7 @@ These cannot run in an automated test because they need the real Claude apps and
 | Check | Result |
 |---|---|
 | Claude Code (terminal and project `.mcp.json`): allow and block | Works |
-| Claude Desktop, agent-mode session: allow, block, timeout | Works. The chat tab starts the same shim; a tool call from the chat tab itself was not observed. |
+| Claude Desktop (version 5.11492): allow, block, timeout, in the app's sessions | Works. Every session the app offered here ran in the app's agent mode (client `local-agent-mode`). The app's separate `claude-ai` chat engine connected to the shim at startup, but no tool call from it was observed, so it is not claimed. |
 | Claude Web through the gateway and a Cloudflare tunnel: allow and block | Works |
 | Figma connector in claude.ai through the browser extension (Edge): allow and block | Works |
 | Figma connector in a terminal Claude Code session **without** the hook | Works; the monitor sees nothing (this is why the hook was added) |
