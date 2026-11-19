@@ -236,13 +236,18 @@ def _daemon(args: argparse.Namespace) -> int:
     except AlreadyRunning:
         print("MCP Monitor daemon is already running.", file=sys.stderr)
         return 0
+    exit_code = 0
     try:
         presenter.run()
+        logging.getLogger("mcp_monitor.daemon").info("daemon stopped normally (quit from the tray icon or stop request)")
     except KeyboardInterrupt:
-        pass
+        logging.getLogger("mcp_monitor.daemon").info("daemon stopped by Ctrl+C")
+    except Exception:                       # noqa: BLE001 - pythonw has no console, so record it in the log
+        logging.getLogger("mcp_monitor.daemon").exception("daemon crashed")
+        exit_code = 1
     finally:
         daemon.stop()
-    return 0
+    return exit_code
 
 
 if __name__ == "__main__":
